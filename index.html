@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Football Battleship</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="css/index.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/2.0.1/css/dataTables.dataTables.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/css/selectize.default.min.css" integrity="sha512-pTaEn+6gF1IeWv3W1+7X7eM60TFu/agjgoHmYhAfLEU8Phuf6JKiiE8YmsNC0aCgQv4192s4Vai8YZ6VNM6vyQ==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <a href="#" class="nav-branding">Battleship</a>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="navPicks">Make Picks</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="navGroups">Groups</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="navAbout">About</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="navLogin">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="navSignup">Signup</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="btnNavLogout">Signout</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </nav>
+    </header>
+    <div class="d-flex flex-wrap col-12 col-md-8 col-lg-8 offset-md-2 offset-lg-2 justify-content-center align-items-center vh-100">
+        <!-- Login Card -->
+        <div id="divLogin" class="card col-12 text-black" style="display: none;">
+            <div class="d-flex card-header justify-content-center">
+                <h3>Login To Battleship</h3>
+            </div>
+            <div class="card-body">
+                <form>
+                    <label for="txtLoginEmail" class="form-label">Email</label>
+                    <input id="txtLoginEmail" class="form-control" type="email">
+                    <label for="txtLoginPassword" class="form-label mt-3">Password</label>
+                    <input id="txtLoginPassword" class="form-control" type="password">
+                    <div class="d-flex justify-content-evenly mt-3">
+                        <button id="btnLogin" class="btn btn-primary col-5" type="button">Login</button>
+                        <button id="btnRegistration" class="btn btn-success col-5" type="button">Register</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Register Card -->
+        <div id="divRegister" class="card col-12 text-black" style="display: none;">
+            <div class="d-flex card-header justify-content-center">
+                <h3>Register For Battleship</h3>
+            </div>
+            <div class="card-body">
+                <form>
+                    <label for="txtRegisterFirstName" class="form-label">First Name</label>
+                    <input id="txtRegisterFirstName" class="form-control" type="text">
+                    <label for="txtRegisterLastName" class="form-label mt-3">Last Name</label>
+                    <input id="txtRegisterLastName" class="form-control" type="text">
+                    <label for="txtRegisterUsername" class="form-label mt-3">Username</label>
+                    <input id="txtRegisterUsername" class="form-control" type="text">
+                    <label for="txtRegisterEmail" class="form-label mt-3">Email</label>
+                    <input id="txtRegisterEmail" class="form-control" type="email">
+                    <label for="txtRegisterPassword" class="form-label mt-3">Password</label>
+                    <input id="txtRegisterPassword" class="form-control" type="password">
+                    <div class="d-flex justify-content-evenly mt-3">
+                        <button id="btnRegister" class="btn btn-primary col-5" type="button">Complete Registration</button>
+                        <button id="btnBackToLogin" class="btn btn-secondary col-5" type="button">Back To Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard Card -->
+        <div id="divDashboard" class="card col-12 text-black" style="display: none;">
+            <div class="d-flex card-header justify-content-center">
+                <h3>Welcome To Battleship</h3>
+            </div>
+            <div class="d-flex card-body justify-content-center">
+                <div class="col-12">
+                    <div>
+                        <h5 class="d-flex justify-content-center">Your Groups</h5>
+                        <table id="tblPicksGroups" class="table table-striped" style="width: 100%;">
+                            <thead>
+                                <tr><th>Group Name</th><th>Owner</th></tr>
+                            </thead>
+                            <tbody>
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-center">
+                        <button id="btnLogout" class="btn btn-primary col-5" type="button">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Picks Card -->
+        <div id="divPicks" class="card col-12 text-black" style="display: none;">
+            <div class="d-flex card-header justify-content-center">
+                <h3>Make Your Picks</h3>
+            </div>
+            <div class="d-flex card-body">
+                <table id="tblWeeks" class="table table-striped" style="width: 100%">
+                    <thead>
+                        <tr><th>Week</th><th>Picks Left</th><th>Picks Made?</th></tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Groups Card -->
+        <div id="divGroups" class="card col-12 text-black" style="display: none;">
+            <div class="d-flex card-header justify-content-center">
+                <h3>Groups</h3>
+            </div>
+            <div class="d-flex card-body justify-content-center" style="flex-direction: column;">
+                <div class="row">
+                    <div class="column">
+                        <div class="cardGroups">
+                            <h5>Create a Group</h5>
+                            <hr>
+                            <button class="btn btn-primary col-8" type="button" id="btnNewGroup">Create New Group</button>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="cardGroups">
+                            <h5>How to Join a group</h5>
+                            <hr>
+                            <p>
+                                To join a group, first find the group you want to join then click anywhere on the row containing that group.
+                                You will then be asked if you'd like to join that group.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-center">
+                    <h5>All Groups</h5>
+                </div>
+                <table id="tblGroups" class="table table-striped" style="width: 100%;">
+                    <thead>
+                        <tr><th>Group Name</th><th>Owner</th><th>Number of Participants</th></tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- About Card (About Game and Rules)-->
+        <div id="divAbout" class="card col-12 text-black">
+            <div class="d-flex card-header justify-content-center">
+                <h2>About Battleship and How to Play</h3>
+            </div>
+            <div class="d-flex card-body justify-content-center" style="flex-direction: column;">
+                <h4>About College Football Battleship:</h5>
+                <p style="margin-left: 20px; margin-right: 20px;"> 
+                    College Football Battleship is a thrilling and strategic game that puts your predictive skills to the test in the realm 
+                    of college football. Inspired by the classic game of Battleship, where players strategically place their ships and attempt 
+                    to sink their opponent's fleet, Battleship College Football adds a new twist by challenging players to navigate the 
+                    unpredictable waters of collegiate gridiron action.
+                </p>
+                <hr>
+                <h4>How To Play:</h5>
+                <ol>
+                    <li><h6>Initial Picks:</h6> At the beginning of the season, each player starts with 7 picks for the first week of college football matchups.</li>
+                    <p></p>
+                    <li><h6>Weekly Picks:</h6> Every week, players must select one college football team they believe will win their game.</li>
+                    <p></p>
+                    <li><h6>No Repicks:</h6> Once a team is selected by a player, they cannot choose that team again for the rest of the season. Strategy is key as players must carefully consider when to use their picks on favored teams versus underdogs.</li>
+                    <p></p>
+                    <li><h6>Consequences of Losses:</h6> If the team chosen by a player loses their game, the player's available picks decrease. For example, if a player loses one pick in a given week, they will have only 6 picks remaining for the following week. This reduction in available picks continues for each incorrect pick.</li>
+                    <p></p>
+                    <li><h6>Minimum Picks:</h6> Players must always have at least one pick available each week. If a player reaches zero picks, they are eliminated from the game.</li>
+                    <li><h6>Strategic Planning:</h6> Players must strategize wisely, balancing their picks between strong favorites and potential upsets throughout the season. As the number of available picks dwindles, the game becomes more intense, requiring careful consideration of each selection.</li>
+                    <p></p>
+                    <li><h6>Victory:</h6> The last player remaining with picks available at the end of the season is declared the winner of Battleship College Football, demonstrating their mastery of college football prediction and strategic foresight.</li>
+                    <p></p>
+                    <li><h6>To Begin:</h6> Create an account then go to the groups tab. There you can either create or join a group. </li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Group Members Card-->
+        <div id="divGroupMembers" class="card col-12 text-black" style="display: none;">
+            
+        </div>
+
+        <!-- Member Picks Card -->
+        <div id="divMemberPicks" class="card col-12 text-black" style="display: none;">
+            <div class="card-header">
+                
+            </div>
+            <div class="card-body">
+
+            </div>
+        </div>
+
+        <!-- Make Picks Card -->
+        <div id="divMakePicks" class="card col-12 text-black" style="display: none;">
+            <div class="d-flex card-header justify-content-center">
+                
+            </div>
+            <div class="d-flex card-body justify-content-center">
+                <select id="selGames" class="col-6">
+                
+                </select>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/2.0.1/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/dataTables.buttons.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.bootstrap5.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.html5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/js/selectize.min.js" integrity="sha512-IOebNkvA/HZjMM7MxL0NYeLYEalloZ8ckak+NDtOViP7oiYzG5vn6WVXyrJDiJPhl4yRdmNAG49iuLmhkUdVsQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.print.min.js"></script>
+    <script>
+        // regex for email validation
+        const regEmail = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/;
+        
+        // Global Variables
+        let userID;
+
+        /* Functions */
+
+        // Logout Function
+        function logout() {
+            let strSessionID = sessionStorage.getItem('SessionID')
+            $.ajax({
+                url: 'http://localhost:8000/sessions?SessionID=' + strSessionID,
+                type: 'DELETE',
+                success: function(){
+                    console.log('Logged Out');
+                    sessionStorage.removeItem('SessionID');
+                    userID = '';
+                    // Slide up the current card (if it's not already hidden)
+                    $('.card:visible').slideUp(function(){
+                        // Slide down the dashboard card
+                        $('#divAbout').slideDown(function(){
+                            location.reload();
+                        });
+                    });
+                }
+            })
+        }
+
+        // getUserID to assign to global variable
+        function getUserID(callback) {
+            $.get('http://localhost:8000/userID?SessionID=' + sessionStorage.getItem('SessionID'), function(result){
+                if(result.message == "success") {
+                    callback(result.userID)
+                } else {
+                    Swal.fire({
+                        title: "Oops",
+                        text: "SessionID is invalid, Please signout then re-login"
+                    })
+                }
+            })
+        }
+
+        // Function to get all groups
+        function getGroups(callback) {
+            $.get('http://localhost:8000/groups', function(result){
+                callback(result);
+            });
+        }
+
+        // Display the groups in a table
+        function displayGroupsTable() {
+            getGroups(function(groups){
+                var promise = new Promise((resolve, reject) => {
+                    
+                    groups.forEach((value, index, array) => {
+                        $.get('http://localhost:8000/groupmembers?groupID=' + value.GroupID, function(result){
+                            let arrMembers = result.members;
+                            let numMembers = arrMembers.length;
+                            let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + value.OwnerName + '</td><td>' + numMembers + '</td></tr>'
+                            $('#tblGroups tbody').append(strRow);
+                            if (index === array.length -1) resolve();
+                        })
+                    })
+                })
+
+                promise.then(() => {
+                    $('#tblGroups').DataTable({
+                        fixedHeader: true,
+                        responsive: true,
+                        columnDefs: [
+                            {
+                                targets: '_all',
+                                className: 'dt-head-center',
+                            },
+                            {
+                                targets: '_all',
+                                className: 'dt-body-center',
+                            }
+                        ]
+                    })
+                })
+            });    
+        }
+
+        // Get the groups that the user is a part of
+        function getYourGroups(callback) {
+            $.get('http://localhost:8000/groupsByUserID?userID=' + userID, function(result){
+                callback(result);
+            })
+        }
+
+        // Display the groups that the user is a part of
+        function displayYourGroups() {
+            getYourGroups(function(groups){
+                let strHTML = `
+                <hr>
+                <div class="row">
+                    <div class="columnYourGroups">
+                        <div class="cardGroups">
+                            <h5>How to View Your Groups</h5>
+                            <hr>
+                            <p>To view the groups you are a part of, simply click on the group's row.</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-center">
+                    <h5>Your Groups</h5>
+                </div>
+                <table id="tblYourGroups" class="table table-striped" style="width: 100%;">
+                    <thead>
+                        <tr><th>Group Name</th><th>Owner</th><th>Number of Participants</th></tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>`;
+                $('#divGroups .card-body').append(strHTML);
+                
+                groups = groups.groups;
+                var promise = new Promise((resolve, reject) => {
+                    
+                    groups.forEach((value, index, array) => {
+                        $.get('http://localhost:8000/groupByID?groupID=' + value.GroupID, function(groupInfo){
+                            $.get('http://localhost:8000/groupmembers?groupID=' + value.GroupID, function(result){
+                                let arrMembers = result.members;
+                                let numMembers = arrMembers.length;
+                                let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + groupInfo.OwnerName + '</td><td>' + numMembers + '</td></tr>'
+                                $('#tblYourGroups tbody').append(strRow);
+                                if (index === array.length -1) resolve();
+                            })
+                        })
+                    })
+                })
+
+                promise.then(() => {
+                    $('#tblYourGroups').DataTable({
+                        fixedHeader: true,
+                        responsive: true,
+                        columnDefs: [
+                            {
+                                targets: '_all',
+                                className: 'dt-head-center',
+                            },
+                            {
+                                targets: '_all',
+                                className: 'dt-body-center',
+                            }
+                        ]
+                    })
+                })
+            })
+        }
+
+        function displayGroupMembersCard(groupID) {
+            $.get('http://localhost:8000/groupmembers?groupID=' + groupID, function(result){
+                let members = result.members;
+                let strHTML = `
+                    <div class="d-flex card-header justify-content-center">
+                        <h3>Group Members</h3>
+                    </div>
+                    <div class="d-flex card-body justify-content-center" style="flex-direction: column;">
+                        <table id="tblGroupMembers" class="table table-striped" style="width: 100%;">
+                            <thead>
+                                <tr><th>Member Name</th><th>Picks Per Week</th><th>Teams Picked</th></tr>
+                            </thead>
+                            <tbody>
+                                
+                            </tbody>
+                        </table>
+                    </div>`;
+                $('#divGroupMembers').html(strHTML);    
+                members.forEach((member) => {
+                    let strRow = '<tr><td>' + member.Username + '</td><td>7</td><td>Add Clickable event to show teams picked</td></tr>';
+                    $('#tblGroupMembers tbody').append(strRow);
+                })
+
+                $('#tblGroupMembers').DataTable({
+                    fixedHeader: true,
+                    responsive: true,
+                    columnDefs: [
+                        {
+                            targets: '_all',
+                            className: 'dt-head-center',
+                        },
+                        {
+                            targets: '_all',
+                            className: 'dt-body-center',
+                        }
+                    ]
+                });
+                
+                
+                $('#divGroups').slideUp(function(){
+                    $('#divGroupMembers').slideDown();
+                })
+            })
+        }
+
+        // Add new row to groups datatable
+        function addGroupRow(groupName, ownerName, numMembers) {
+            let table = $('#tblGroups').DataTable();
+            let newRow = [
+                groupName,
+                ownerName,
+                numMembers
+            ];
+            table.row.add(newRow).draw();
+        }
+
+        function addYourGroupRow(groupName, ownerName, numMembers) {
+            let table = $('#tblYourGroups').DataTable();
+            let newRow = [
+                groupName,
+                ownerName,
+                numMembers
+            ];
+            table.row.add(newRow).draw();
+        }
+
+        function addToPicksGroups(groupName, ownerName) {
+            let table = $('#tblPicksGroups').DataTable();
+            let newRow = [
+                groupName,
+                ownerName
+            ];
+            table.row.add(newRow).draw();
+        }
+
+        function displayPicksGroups () {
+            getYourGroups(function(groups){
+                groups = groups.groups;
+                var promise = new Promise((resolve, reject) => {
+                    
+                    groups.forEach((value, index, array) => {
+                        $.get('http://localhost:8000/groupByID?groupID=' + value.GroupID, function(groupInfo){
+                            let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + groupInfo.OwnerName + '</td></tr>'
+                            $('#tblPicksGroups tbody').append(strRow);
+                            if (index === array.length -1) resolve();
+                        })
+                    })
+                })
+
+                promise.then(() => {
+                    $('#tblPicksGroups').DataTable({
+                        fixedHeader: true,
+                        responsive: true,
+                        columnDefs: [
+                            {
+                                targets: '_all',
+                                className: 'dt-head-center',
+                            },
+                            {
+                                targets: '_all',
+                                className: 'dt-body-center',
+                            }
+                        ]
+                    })
+                })
+            
+            })
+        }
+
+        /* End Functions */
+
+        // When the document is ready load everything needed
+        $(document).ready(function(){
+            displayGroupsTable();
+            if (sessionStorage.getItem('SessionID')) {
+                // get userID
+                getUserID(function(result){
+                    // set global userID
+                    userID = result;
+                    displayPicksGroups();
+                    displayYourGroups();
+                });
+                $('#divAbout').slideToggle(function(){
+                    $('#divDashboard').slideToggle();
+                })
+            }
+        })
+
+        //login the user
+        $('#btnLogin').on('click', function(){
+            let strEmail = $('#txtLoginEmail').val();
+            let strPassword = $('#txtLoginPassword').val();
+
+            let blnError = false;
+            let strErrorMessage = '';
+            if (strEmail.length < 1){
+                blnError = true;
+                strErrorMessage = strErrorMessage + 'Email cannot be blank.  ';
+            }
+            if (strPassword.length < 1){
+                blnError = true;
+                strErrorMessage = strErrorMessage + 'Password cannot be blank.  ';
+            }
+            if (blnError == true){
+                Swal.fire({
+                    title: "Oops",
+                    text: strErrorMessage,
+                    icon: "error"
+                });
+            } else {
+                $.get('http://localhost:8000/users?email=' + strEmail + '&password=' + strPassword, function(result){
+                    if (!result.error){
+                        let strUserID = result.userID;
+                        userID = strUserID;     //set globalUserID
+                        $.post('http://localhost:8000/sessions', {email: strEmail, password: strPassword}, function(result){
+                            if(result.Error){
+                                Swal.fire({
+                                    title: "Oops",
+                                    html: '<p>' + result.Error  + '</p>',
+                                    icon: "error"
+                                });
+                            } else {
+                                sessionStorage.setItem('SessionID', result.sessionid)
+                                displayPicksGroups();
+                                displayYourGroups();
+                                Swal.fire({
+                                    title: "Success",
+                                    text: "User and Session Created",
+                                    icon: "success"
+                                })
+                                $('#divLogin').slideToggle(function(){
+                                    $('#divDashboard').slideToggle();
+                                })
+                            }
+                        })
+                    } else {
+                        Swal.fire({
+                            title:"Incorrect Credentials",
+                            text: "Incorrect Credentials Were Provided",
+                            icon: "error"
+                        })
+                    }
+                })
+            }
+        })
+        
+        // Register User
+        $('#btnRegister').on('click', function(){
+            let strFirstName = $('#txtRegisterFirstName').val();
+            let strLastName = $('#txtRegisterLastName').val();
+            let strUsername = $('#txtRegisterUsername').val();
+            let strEmail = $('#txtRegisterEmail').val();
+            let strPassword = $('#txtRegisterPassword').val();
+
+            // Input Validation
+            let blnError = false;
+            if (strFirstName < 1) {
+                blnError = true;
+                strError += 'First name cannot be blank.  ';
+            }
+            if (strLastName < 1) {
+                blnError = true;
+                strError += 'Last name cannot be blank.  ';
+            }
+            if (strUsername < 1) {
+                blnError = true;
+                strError += 'Last name cannot be blank.  ';
+            }
+            if (!regEmail.test(strEmail)) {
+                blnError = true;
+                strError += 'Invalid Email Format.  ';
+            }
+            if (strPassword < 1) {
+                blnError = true;
+                strError += 'Password cannot be blank.  ';
+            }
+
+            if (blnError) {
+                console.log(strError);
+                Swal.fire({ icon: 'error', title: 'Uh oh!', text: strError });
+            } else {
+                // Create an object to hold the form data
+                let formData = {
+                    firstName: strFirstName,
+                    lastName: strLastName,
+                    username: strUsername,
+                    email: strEmail,
+                    password: strPassword
+                };
+            
+                // call post to users to create a new user
+                $.post('http://localhost:8000/users', formData, function(result){
+                    if (result.Error){
+                        Swal.fire({
+                            title: "Oops!",
+                            icon: "error",
+                            text: result.Error
+                        })
+                    } else {
+                        userID = result.userID;
+                        $.post('http://localhost:8000/sessions', {email: strEmail, password: strPassword}, function(result){
+                            console.log(result)
+                            if(result.Error){
+                                Swal.fire({
+                                    title: "Oops",
+                                    html: '<p>' + result.Error  + '</p>',
+                                    icon: "error"
+                                });
+                            } else {
+                                sessionStorage.setItem('SessionID', result.sessionid)
+                                Swal.fire({
+                                    title: "Success",
+                                    text: "User and Session Created",
+                                    icon: "success"
+                                })
+                                $('#divRegister').slideToggle(function(){
+                                    $('#divDashboard').slideToggle();
+                                })
+                            }
+                        })
+                    }
+                })
+            }
+        })
+
+        //logout the user
+        $('#btnNavLogout').on('click', function(){
+            logout();
+        })
+
+        $('#btnLogout').on('click', function(){
+            logout();
+        })
+        
+        // Login To Registration
+        $('#btnRegistration').on('click', function(){
+            $('#divLogin').slideToggle(function(){
+                $('#divRegister').slideToggle();
+            })
+        })
+
+        // Registration to Login
+        $('#btnBackToLogin').on('click', function(){
+            $('#divRegister').slideToggle(function(){
+                $('#divLogin').slideToggle();
+            })
+        })
+
+        /*
+            Nav Menu Functionality Start
+        */
+        const hamburger = document.querySelector('.hamburger');
+        const navMenu = document.querySelector('.nav-menu');
+
+        // Event Listener for Hamburger
+        hamburger.addEventListener('click', function(){
+            hamburger.classList.toggle('active');
+            navMenu.classList.toggle('active');
+        })
+
+        // Event Listener for Nav Links
+        document.querySelectorAll('.nav-link').forEach(function(navLink){
+            navLink.addEventListener('click', function(){
+                hamburger.classList.remove('active');
+                navMenu.classList.remove('active');
+            })
+        })
+
+        // Go to Picks from anywhere
+        $('#navPicks').on('click', function(e){
+            e.preventDefault(); // Prevent the default link behavior
+
+            // check if logged in
+            if (sessionStorage.getItem('SessionID')) {
+                // Slide up the current card (if it's not already hidden)
+                $('.card:visible').slideUp(function(){
+                    // Slide down the dashboard card
+                    $('#divDashboard').slideDown();
+                });
+            } else {
+                Swal.fire({
+                    title: "Not Logged In",
+                    text: "You must be logged in to view this page",
+                    icon: "error",
+                    showConfirmButton: true,
+                    confirmButtonText: "Go To Login Page?",
+                    showCancelButton: true,
+                    cancelButtonText: "Stay Here",
+                    customClass: {
+                        actions: 'my-actions',
+                        confirmButton: 'order-1 right-gap',
+                        cancelButton: 'order-2'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('.card:visible').slideUp(function(){
+                            $('#divLogin').slideDown();
+                        });
+                    }
+                })
+            }
+        });
+
+        // Go to groups from anywhere
+        $('#navGroups').on('click', function(e){
+            e.preventDefault(); // Prevent the default link behavior
+            // Slide up the current card (if it's not already hidden)
+            $('.card:visible').slideUp(function(){
+                // Slide down the dashboard card
+                $('#divGroups').slideDown();
+            });
+        });
+
+        // Go to about from anywhere
+        $('#navAbout').on('click', function(e){
+            e.preventDefault(); // Prevent the default link behavior
+            // Slide up the current card (if it's not already hidden)
+            $('.card:visible').slideUp(function(){
+                // Slide down the dashboard card
+                $('#divAbout').slideDown();
+            });
+        });
+
+        // Go to login from anywhere
+        $('#navLogin').on('click', function(e){
+            if (!sessionStorage.getItem('SessionID')) {
+                e.preventDefault(); // Prevent the default link behavior
+                // Slide up the current card (if it's not already hidden)
+                $('.card:visible').slideUp(function(){
+                    // Slide down the dashboard card
+                    $('#divLogin').slideDown();
+                });
+            } else {
+                Swal.fire({
+                    title: "Already Logged In",
+                    text: "You are already logged in would you like to log out?",
+                    icon: "error",
+                    showConfirmButton: true,
+                    confirmButtonText: "Logout",
+                    showCancelButton: true,
+                    cancelButtonText: "Stay Logged In",
+                    customClass: {
+                        actions: 'my-actions',
+                        confirmButton: 'order-1 right-gap',
+                        cancelButton: 'order-2'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        logout();
+                    }
+                })
+            }
+            
+        });
+
+        // Go to signup from anywhere
+        $('#navSignup').on('click', function(e){
+            if (!sessionStorage.getItem('SessionID')) {
+                e.preventDefault(); // Prevent the default link behavior
+                // Slide up the current card (if it's not already hidden)
+                $('.card:visible').slideUp(function(){
+                    // Slide down the dashboard card
+                    $('#divRegister').slideDown();
+                });
+            } else {
+                Swal.fire({
+                    title: "Already Logged In",
+                    text: "You are already logged in would you like to log out to create a new account?",
+                    icon: "error",
+                    showConfirmButton: true,
+                    confirmButtonText: "Logout",
+                    showCancelButton: true,
+                    cancelButtonText: "Stay Logged In",
+                    customClass: {
+                        actions: 'my-actions',
+                        confirmButton: 'order-1 right-gap',
+                        cancelButton: 'order-2'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let strSessionID = sessionStorage.getItem('SessionID')
+                        $.ajax({
+                            url: 'http://localhost:8000/sessions?SessionID=' + strSessionID,
+                            type: 'DELETE',
+                            success: function(){
+                                sessionStorage.removeItem('SessionID');
+                                userID = '';
+                                $('#divDashboard').slideUp(function () {
+                                    $('#divAbout').slideDown(function(){
+                                        location.reload();
+                                    });
+                                });
+                            }
+                        })
+                    }
+                })
+            }
+            
+        });
+        /*
+            Nav Menu Functionality End
+        */
+
+        // Functionality for create new group using a sweet alert
+        $('#btnNewGroup').on('click', function(){
+            // check if user is logged in
+            if (!sessionStorage.getItem('SessionID')) {
+                Swal.fire({
+                    title: "Not Logged In",
+                    text: "You must be logged in to create a new group",
+                    icon: "error",
+                    showConfirmButton: true,
+                    confirmButtonText: "Go To Login Page?",
+                    showCancelButton: true,
+                    cancelButtonText: "Stay Here",
+                    customClass: {
+                        actions: 'my-actions',
+                        confirmButton: 'order-1 right-gap',
+                        cancelButton: 'order-2'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('.card:visible').slideUp(function(){
+                            $('#divLogin').slideDown();
+                        });
+                    }
+                })
+            } else {
+                // Show sweetalert to create a group
+                Swal.fire({
+                    title: 'Create New Group',
+                    text: 'Enter Group Name (atleast 3 characters long)',
+                    input: 'text',
+                    inputAttributes: {
+                        autocapitalize: 'off'
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'Create Group',
+                    inputValidator: (value) => {
+                        if (!value || value.length < 3) {
+                            return 'Input must be at least 3 characters long!';
+                        }
+                    }
+                }).then((name) => {
+                    if (name.isConfirmed) {
+                        Swal.fire({
+                            title: 'Password Protected?',
+                            text: 'If you would like a password protected group, enter a password of atleast 3 characters. Otherwise, leave blank.',
+                            input: 'password',
+                            allowOutsideClick: false,
+                            confirmButtonText: 'Finish Creating Group',
+                            inputValidator: (value) => {
+                                // If blank or 3 or more than ok
+                                if (!value || value.length >= 3) {
+                                    return false;
+                                } else {
+                                    return 'Password must be at least 3 characters long!';
+                                }
+                            }
+                        }).then((password) => {
+                            let strGroupName = name.value;
+                            let strGroupPassword = password.value;
+
+                            let formData = {
+                                groupName: strGroupName,
+                                ownerID: userID,
+                                password: strGroupPassword
+                            }
+
+                            $.post('http://localhost:8000/groups', formData, function(result){
+                                $.post('http://localhost:8000/groupmembers', {groupID:result.groupID, groupName:result.groupName, userID:userID, groupPassword:strGroupPassword}, function(res){
+                                    if (!password.value) {
+                                        Swal.fire({
+                                            title: 'Group Created',
+                                            text: 'Your group has been created successfully with no password!',
+                                            icon: 'success'
+                                        });
+                                        formData = {
+                                            groupID: result.groupID,
+                                            userID: userID,
+                                            week: 1,
+                                            picksLeft: 7
+                                        };
+                                        $.post('http://localhost:8000/picksMade', formData, function(posted){
+                                            console.log(posted);
+                                        })
+                                        $.get('http://localhost:8000/groupmembers?groupID=' + result.groupID, function(groupMembers){
+                                            let arrMembers = groupMembers.members;
+                                            let numMembers = arrMembers.length;
+                                            $.get('http://localhost:8000/groupOwner?groupID=' + result.groupID, function(owner){
+                                                addGroupRow(result.groupName, owner.owner, numMembers);
+                                                addYourGroupRow(result.groupName, owner.owner, numMembers);
+                                                addToPicksGroups(result.groupName, owner.owner);
+                                            })
+                                        })
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Group Created',
+                                            text: 'Your group has been created successfully with a password!',
+                                            icon: 'success'
+                                        });
+                                    }
+                                })
+                            });                           
+                        })
+                    }
+                });
+            }
+        });
+
+        // When Group is clicked, ask if they want to join
+        $('#tblGroups tbody').on('click', 'tr', function(){
+            let strGroupName = $(this).find('td').eq(0).text();
+            let strOwnerName = $(this).find('td').eq(1).text();
+            let strNumMembers = $(this).find('td').eq(2).text();
+            let strGroupID = $(this).attr('data-value');
+
+            Swal.fire({
+                title: 'Join Group?',
+                text: 'Would you like to join the group "' + strGroupName + '" owned by ' + strOwnerName + ' with ' + strNumMembers + ' members?',
+                showCancelButton: true,
+                confirmButtonText: 'Join Group'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Check if group has password (if password in sql table is blank then no password), if so, ask for password (validate password using backend), otherwise join
+                    $.get('http://localhost:8000/groupByID?groupID=' + strGroupID, function(result){
+                        console.log(result);
+                        if (result.Password) {
+                            Swal.fire({
+                                title: 'Enter Group Password',
+                                text: 'Please enter the password for the group "' + strGroupName + '"',
+                                input: 'password',
+                                confirmButtonText: 'Join Group',
+                                showCancelButton: true,
+                                inputValidator: (value) => {
+                                    if (!value || value.length < 3) {
+                                        return 'Password must be at least 3 characters long!';
+                                    }
+                                }
+                            }).then((input) => {
+                                if (input.isConfirmed) {
+                                    $.post('http://localhost:8000/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:input.value}, function(res){
+                                        console.log(res);
+                                        if (!res.error) {
+                                            Swal.fire({
+                                                title: 'Group Joined',
+                                                text: 'You have successfully joined the group "' + strGroupName + '"!',
+                                                icon: 'success'
+                                            });
+                                            addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
+                                            $.post('http://localhost:8000/picksMade', {groupID:strGroupID, userID:userID, week:1, picksLeft:7}, function(result){
+                                                console.log(result);
+                                            })
+                                        } else {
+                                            Swal.fire({
+                                                title: 'Incorrect Password',
+                                                text: 'Incorrect Password Given. Please try again.',
+                                                icon: 'error'
+                                            });
+                                        }
+                                    })
+                                }
+                            })
+                        } else {
+                            $.post('http://localhost:8000/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:''}, function(res){
+                                console.log(res);
+                                if (res) {
+                                    Swal.fire({
+                                        title: 'Group Joined',
+                                        text: 'You have successfully joined the group "' + strGroupName + '"!',
+                                        icon: 'success'
+                                    });
+                                    addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
+                                } else {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'There was an error joining the group. Please try again later.',
+                                        icon: 'error'
+                                    });
+                                }
+                            })
+                        }
+                    })
+                }
+            })
+        })
+
+        $(document).on('click', '#tblYourGroups tbody tr', function(){
+            let strGroupID = $(this).attr('data-value');
+            console.log(strGroupID);
+            displayGroupMembersCard(strGroupID);
+        });
+
+        $(document).on('click', '#tblGroupMembers tbody tr', function(){
+            let strUsername = $(this).find('td').eq(0).text();
+            let strHTML = `
+                <div class="d-flex card-header justify-content-center">
+                    <h3>${strUsername}'s Picks</h3>
+                </div>
+                <div class="d-flex card-body justify-content-center" style="flex-direction: column;">
+                    <table id="tblTeamsPicked" class="table table-striped" style="width: 100%;">
+                        <thead>
+                            <tr><th>Week</th><th>Team</th></tr>
+                        </thead>
+                        <tbody>
+                            
+                        </tbody>
+                    </table>
+                </div>`;
+            $('#divMemberPicks').html(strHTML);
+            $('.card:visible').slideUp(function(){
+                $('#divMemberPicks').slideDown();
+            })
+        })
+
+        $(document).on('click', '#tblPicksGroups tbody tr', function(){
+            let strGroupID = $(this).attr('data-value');
+            let intWeek = 1;
+            console.log(strGroupID);
+            $.get('http://localhost:8000/picksMade?groupID=' + strGroupID + '&week=' + intWeek, function(result){
+                console.log(result);
+                for (i = 1; i <= 15; i++) {
+                    if (i == 1){
+                        let strRow = '<tr><td>' + i + '</td><td>7</td><td>Yes</td></tr>';
+                        $('#tblWeeks tbody').append(strRow);
+                    } else {
+                        let strRow = '<tr><td>' + i + '</td><td>7</td><td>No</td></tr>';
+                        $('#tblWeeks tbody').append(strRow);
+                    }
+                }         
+                $('#divDashboard').slideToggle(function(){
+                    $('#divPicks').slideToggle();
+                })
+            })
+        })
+
+        // Make Weekly Picks
+        $(document).on('click', '#tblWeeks tbody tr', function(){
+            let clickedWeek = $(this).find('td').eq(0).text();
+            console.log(clickedWeek);
+            $.get('http://localhost:8000/weekNumber', function(result){
+                let cfbWeekNumber = result.weekNumber;
+                console.log(cfbWeekNumber);
+                if (clickedWeek >= cfbWeekNumber){
+                    let strHTML = '<h2>Make Picks for Week ' + clickedWeek + '</h2>';
+                    $('#divMakePicks .card-header').html(strHTML);
+                    $.get('http://localhost:8000/weekData', function(result){
+                        console.log(result);
+                        let strHTML = "<option value=''>Select a Game</option>";
+                        $('#selGames').html(strHTML);
+                        result.forEach((game) => {
+                            strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + '</option>';
+                        })
+                        $('#selGames').html(strHTML).selectize({
+                            sortField: 'text',
+                        });
+                        $('#divPicks').slideUp(function(){
+                            $('#divMakePicks').slideDown();
+                        })
+                    })
+                } else {
+                    Swal.fire({
+                        title: 'Week Passed',
+                        text: 'That week has passed or those games are about to begin, please select a different week.',
+                        icon: 'error'
+                    })
+                }
+            })
+        })
+    </script>
+</body>
+</html>

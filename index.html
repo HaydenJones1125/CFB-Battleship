@@ -94,6 +94,23 @@
             <div class="d-flex card-body justify-content-center">
                 <div class="col-12">
                     <div>
+                        <div class="row">
+                            <div class="column">
+                                <div class="cardGroups">
+                                    <h5>Make Picks</h5>
+                                    <hr>
+                                    <p>Click in the table on the row with the group you want to make picks for this week's games.</p>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <div class="cardGroups">
+                                    <h5>About</h5>
+                                    <hr>
+                                    <p>Picking a team must be made before that game's scheduled start time, with the option to make their picks at any time during the week, rather than all at once.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
                         <h5 class="d-flex justify-content-center">Your Groups</h5>
                         <table id="tblPicksGroups" class="table table-striped" style="width: 100%;">
                             <thead>
@@ -109,23 +126,6 @@
                         <button id="btnLogout" class="btn btn-primary col-5" type="button">Logout</button>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Picks Card -->
-        <div id="divPicks" class="card col-12 text-black" style="display: none;">
-            <div class="d-flex card-header justify-content-center">
-                <h3>Make Your Picks</h3>
-            </div>
-            <div class="d-flex card-body">
-                <table id="tblWeeks" class="table table-striped" style="width: 100%">
-                    <thead>
-                        <tr><th>Week</th><th>Picks Left</th><th>Picks Made?</th></tr>
-                    </thead>
-                    <tbody>
-
-                    </tbody>
-                </table>
             </div>
         </div>
 
@@ -150,6 +150,8 @@
                             <p>
                                 To join a group, first find the group you want to join then click anywhere on the row containing that group.
                                 You will then be asked if you'd like to join that group.
+                                <p></p>
+                                You can no longer join a group after the first game of the season has started.
                             </p>
                         </div>
                     </div>
@@ -166,11 +168,33 @@
                         
                     </tbody>
                 </table>
+                <hr>
+                <div class="row">
+                    <div class="columnYourGroups">
+                        <div class="cardGroups">
+                            <h5>How to View Your Groups</h5>
+                            <hr>
+                            <p>To view the groups you are a part of, simply click on the group's row.</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-center">
+                    <h5>Your Groups</h5>
+                </div>
+                <table id="tblYourGroups" class="table table-striped" style="width: 100%;">
+                    <thead>
+                        <tr><th>Group Name</th><th>Owner</th><th>Number of Participants</th></tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>
             </div>
         </div>
 
         <!-- About Card (About Game and Rules)-->
-        <div id="divAbout" class="card col-12 text-black">
+        <div id="divAbout" class="card col-12 text-black" style="display: none;">
             <div class="d-flex card-header justify-content-center">
                 <h2>About Battleship and How to Play</h3>
             </div>
@@ -183,22 +207,25 @@
                     unpredictable waters of collegiate gridiron action.
                 </p>
                 <hr>
+                <p><h6>To Begin Playing:</h6> Create an account then go to the groups tab. There you can either create or join a group.</p>
+                <hr>
                 <h4>How To Play:</h5>
                 <ol>
                     <li><h6>Initial Picks:</h6> At the beginning of the season, each player starts with 7 picks for the first week of college football matchups.</li>
                     <p></p>
-                    <li><h6>Weekly Picks:</h6> Every week, players must select one college football team they believe will win their game.</li>
+                    <li><h6>Weekly Picks:</h6> Every week, players must select one college football team they believe will win their game. The picked team must be an FBS team.</li>
                     <p></p>
                     <li><h6>No Repicks:</h6> Once a team is selected by a player, they cannot choose that team again for the rest of the season. Strategy is key as players must carefully consider when to use their picks on favored teams versus underdogs.</li>
                     <p></p>
-                    <li><h6>Consequences of Losses:</h6> If the team chosen by a player loses their game, the player's available picks decrease. For example, if a player loses one pick in a given week, they will have only 6 picks remaining for the following week. This reduction in available picks continues for each incorrect pick.</li>
+                    <li><h6>Consequences of Losses:</h6> If the team chosen by a player loses their game or a pick is not made, the player's available picks decrease. For example, if a player loses one pick in a given week, they will have only 6 picks remaining for the following week. This reduction in available picks continues for each incorrect pick.</li>
                     <p></p>
-                    <li><h6>Minimum Picks:</h6> Players must always have at least one pick available each week. If a player reaches zero picks, they are eliminated from the game.</li>
+                    <li><h6>Minimum Picks:</h6> Players must always have at least one pick available each week. If a player reaches zero picks, they may be eliminated from the game.</li>
+                    <p></p>
                     <li><h6>Strategic Planning:</h6> Players must strategize wisely, balancing their picks between strong favorites and potential upsets throughout the season. As the number of available picks dwindles, the game becomes more intense, requiring careful consideration of each selection.</li>
                     <p></p>
-                    <li><h6>Victory:</h6> The last player remaining with picks available at the end of the season is declared the winner of Battleship College Football, demonstrating their mastery of college football prediction and strategic foresight.</li>
+                    <li><h6>Victory:</h6> The last player remaining with picks available at the end of the season is declared the winner of Battleship College Football, demonstrating their mastery of college football prediction and strategic foresight. In case of a tie, the players in the </li>
                     <p></p>
-                    <li><h6>To Begin:</h6> Create an account then go to the groups tab. There you can either create or join a group. </li>
+                    <li><h6>Tiebreaker:</h6> If tied, the player who held the higher number of picks for the longest time wins. For example, if both players end with 4 picks, the one who dropped to 4 picks later in the season wins.</li>
                 </ol>
             </div>
         </div>
@@ -223,10 +250,8 @@
             <div class="d-flex card-header justify-content-center">
                 
             </div>
-            <div class="d-flex card-body justify-content-center">
-                <select id="selGames" class="col-6">
+            <div class="d-flex card-body justify-content-center" style="flex-direction: column;">
                 
-                </select>
             </div>
         </div>
     </div>
@@ -249,6 +274,8 @@
         
         // Global Variables
         let userID;
+        let groupID;
+        let week;
 
         /* Functions */
 
@@ -259,7 +286,6 @@
                 url: 'http://localhost:8000/sessions?SessionID=' + strSessionID,
                 type: 'DELETE',
                 success: function(){
-                    console.log('Logged Out');
                     sessionStorage.removeItem('SessionID');
                     userID = '';
                     // Slide up the current card (if it's not already hidden)
@@ -271,6 +297,38 @@
                     });
                 }
             })
+        }
+
+        // Function to convert ISO string to local 12 hour time
+        function convertTo12HourFormat(isoString) {
+            const date = new Date(isoString);
+            let hours = date.getHours();
+            const minutes = date.getMinutes();
+            const seconds = date.getSeconds();
+            const milliseconds = date.getMilliseconds();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            
+            // Convert to 12-hour format
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+
+            // Pad minutes, seconds, and milliseconds with leading zeros if needed
+            const strMinutes = minutes < 10 ? '0' + minutes : minutes;
+            const strSeconds = seconds < 10 ? '0' + seconds : seconds;
+            const strMilliseconds = milliseconds < 100 ? '0' + milliseconds : milliseconds;
+
+            return `${hours}:${strMinutes} ${ampm}`;
+        }
+
+        // Function to check if game has started
+        function checkGameStart(gameTime) {
+            const currentTime = new Date("2024-09-06T23:00:00.000Z");
+            const gameStartTime = new Date(gameTime);
+            if(currentTime < gameStartTime) {
+                return false;
+            } else {
+                return true;
+            }
         }
 
         // getUserID to assign to global variable
@@ -339,31 +397,6 @@
         // Display the groups that the user is a part of
         function displayYourGroups() {
             getYourGroups(function(groups){
-                let strHTML = `
-                <hr>
-                <div class="row">
-                    <div class="columnYourGroups">
-                        <div class="cardGroups">
-                            <h5>How to View Your Groups</h5>
-                            <hr>
-                            <p>To view the groups you are a part of, simply click on the group's row.</p>
-                        </div>
-                    </div>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-center">
-                    <h5>Your Groups</h5>
-                </div>
-                <table id="tblYourGroups" class="table table-striped" style="width: 100%;">
-                    <thead>
-                        <tr><th>Group Name</th><th>Owner</th><th>Number of Participants</th></tr>
-                    </thead>
-                    <tbody>
-                        
-                    </tbody>
-                </table>`;
-                $('#divGroups .card-body').append(strHTML);
-                
                 groups = groups.groups;
                 var promise = new Promise((resolve, reject) => {
                     
@@ -409,38 +442,61 @@
                     <div class="d-flex card-body justify-content-center" style="flex-direction: column;">
                         <table id="tblGroupMembers" class="table table-striped" style="width: 100%;">
                             <thead>
-                                <tr><th>Member Name</th><th>Picks Per Week</th><th>Teams Picked</th></tr>
+                                <tr><th>Member Name</th><th>Picks Per Week</th><th>Last Lost Pick Week</th></tr>
                             </thead>
                             <tbody>
                                 
                             </tbody>
                         </table>
+                        <div id="divBtn">
+
+                        </div>
                     </div>`;
                 $('#divGroupMembers').html(strHTML);    
-                members.forEach((member) => {
-                    let strRow = '<tr><td>' + member.Username + '</td><td>7</td><td>Add Clickable event to show teams picked</td></tr>';
-                    $('#tblGroupMembers tbody').append(strRow);
-                })
-
-                $('#tblGroupMembers').DataTable({
-                    fixedHeader: true,
-                    responsive: true,
-                    columnDefs: [
-                        {
-                            targets: '_all',
-                            className: 'dt-head-center',
-                        },
-                        {
-                            targets: '_all',
-                            className: 'dt-body-center',
-                        }
-                    ]
+                
+                let promise = new Promise((resolve, reject) => {
+                    members.forEach((member, index, array) => {
+                        $.get('http://localhost:8000/picksLeft?userID=' + member.UserID + '&groupID=' + groupID, function(result){
+                            $.get('http://localhost:8000/lastLostWeek?userID=' + member.UserID + '&groupID=' + groupID, function(lastLostWeek){
+                                // Check if lastLostWeek is empty (no picks lost)
+                                if (lastLostWeek.lastLostWeek.length < 1) {
+                                    lastLostWeek.lastLostWeek = [{Week: '1'}];
+                                    let strRow = '<tr data-value=' + member.UserID +'><td>' + member.Username + '</td><td>' + result.picksLeft[0].PicksLeft + '</td><td>' + lastLostWeek.lastLostWeek[0].Week + '</td></tr>';
+                                    $('#tblGroupMembers tbody').append(strRow);
+                                } else {
+                                    let strRow = '<tr data-value=' + member.UserID +'><td>' + member.Username + '</td><td>' + result.picksLeft[0].PicksLeft + '</td><td>' + lastLostWeek.lastLostWeek[0].Week + '</td></tr>';
+                                    $('#tblGroupMembers tbody').append(strRow);
+                                }
+                                if (index === array.length -1) resolve();
+                            })
+                        })
+                    })
                 });
-                
-                
-                $('#divGroups').slideUp(function(){
-                    $('#divGroupMembers').slideDown();
-                })
+
+                promise.then(() => {
+                    $('#tblGroupMembers').DataTable({
+                        fixedHeader: true,
+                        responsive: true,
+                        columnDefs: [
+                            {
+                                targets: '_all',
+                                className: 'dt-head-center',
+                            },
+                            {
+                                targets: '_all',
+                                className: 'dt-body-center',
+                            }
+                        ],
+                        order: [[1, 'desc'],[2, 'desc']]
+                    });
+
+                    strHTML = `<button id="btnBackToGroups" class="btn btn-primary col-12 mt-3" type="button">Back To Groups</button>`;
+                    $('#divBtn').append(strHTML);
+                    
+                    $('#divGroups').slideUp(function(){
+                        $('#divGroupMembers').slideDown();
+                    })
+                });
             })
         }
 
@@ -464,6 +520,7 @@
             ];
             table.row.add(newRow).draw();
         }
+
 
         function addToPicksGroups(groupName, ownerName) {
             let table = $('#tblPicksGroups').DataTable();
@@ -521,9 +578,9 @@
                     displayPicksGroups();
                     displayYourGroups();
                 });
-                $('#divAbout').slideToggle(function(){
-                    $('#divDashboard').slideToggle();
-                })
+                $('#divDashboard').slideToggle();
+            } else if (!sessionStorage.getItem('SessionID')) {
+                $('#divAbout').slideToggle();
             }
         })
 
@@ -617,7 +674,6 @@
             }
 
             if (blnError) {
-                console.log(strError);
                 Swal.fire({ icon: 'error', title: 'Uh oh!', text: strError });
             } else {
                 // Create an object to hold the form data
@@ -640,7 +696,6 @@
                     } else {
                         userID = result.userID;
                         $.post('http://localhost:8000/sessions', {email: strEmail, password: strPassword}, function(result){
-                            console.log(result)
                             if(result.Error){
                                 Swal.fire({
                                     title: "Oops",
@@ -687,6 +742,13 @@
             })
         })
 
+        // Go from divGroupMembers to divGroups
+        $(document).on('click', '#btnBackToGroups', function(){
+            $('#divGroupMembers').slideUp(function(){
+                $('#divGroups').slideDown();
+            })
+        })
+
         /*
             Nav Menu Functionality Start
         */
@@ -716,7 +778,7 @@
                 // Slide up the current card (if it's not already hidden)
                 $('.card:visible').slideUp(function(){
                     // Slide down the dashboard card
-                    $('#divDashboard').slideDown();
+                    location.reload();
                 });
             } else {
                 Swal.fire({
@@ -922,9 +984,6 @@
                                             week: 1,
                                             picksLeft: 7
                                         };
-                                        $.post('http://localhost:8000/picksMade', formData, function(posted){
-                                            console.log(posted);
-                                        })
                                         $.get('http://localhost:8000/groupmembers?groupID=' + result.groupID, function(groupMembers){
                                             let arrMembers = groupMembers.members;
                                             let numMembers = arrMembers.length;
@@ -942,6 +1001,12 @@
                                         });
                                     }
                                 })
+                                let postData = {
+                                    groupID: result.groupID,
+                                    userID: userID
+                                }
+                                $.post('http://localhost:8000/picksLeft', postData, function(res){
+                                })
                             });                           
                         })
                     }
@@ -955,69 +1020,109 @@
             let strOwnerName = $(this).find('td').eq(1).text();
             let strNumMembers = $(this).find('td').eq(2).text();
             let strGroupID = $(this).attr('data-value');
-
-            Swal.fire({
-                title: 'Join Group?',
-                text: 'Would you like to join the group "' + strGroupName + '" owned by ' + strOwnerName + ' with ' + strNumMembers + ' members?',
-                showCancelButton: true,
-                confirmButtonText: 'Join Group'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Check if group has password (if password in sql table is blank then no password), if so, ask for password (validate password using backend), otherwise join
-                    $.get('http://localhost:8000/groupByID?groupID=' + strGroupID, function(result){
-                        console.log(result);
-                        if (result.Password) {
+            // Get first game to check if season has started
+            $.get('http://localhost:8000/firstGame', function(game){
+                let gameStartTime = game.start_date;
+                let gameStart = checkGameStart(gameStartTime);
+                if (gameStart) {
+                    Swal.fire({
+                        title: 'Season Has Started',
+                        text: 'The first game of the season has already started. You cannot join a group after the start of the season',
+                        icon: 'warning'
+                    });
+                    return;
+                } else {
+                    // Get groupMembers to check if user is in group
+                    $.get('http://localhost:8000/groupmembers?groupID=' + strGroupID, function(result){
+                        let arrMembers = result.members;
+                        let blnUserInGroup = false;
+                        arrMembers.forEach((member) => {
+                            if (member.UserID == userID) {
+                                blnUserInGroup = true;
+                            }
+                        })
+                        if (blnUserInGroup) {
                             Swal.fire({
-                                title: 'Enter Group Password',
-                                text: 'Please enter the password for the group "' + strGroupName + '"',
-                                input: 'password',
-                                confirmButtonText: 'Join Group',
+                                title: 'Already In Group',
+                                text: 'You are already a member of this group!',
+                                icon: 'warning'
+                            });
+                            return;
+                        } else {
+                            Swal.fire({
+                                title: 'Join Group?',
+                                text: 'Would you like to join the group "' + strGroupName + '" owned by ' + strOwnerName + ' with ' + strNumMembers + ' members?',
                                 showCancelButton: true,
-                                inputValidator: (value) => {
-                                    if (!value || value.length < 3) {
-                                        return 'Password must be at least 3 characters long!';
-                                    }
-                                }
-                            }).then((input) => {
-                                if (input.isConfirmed) {
-                                    $.post('http://localhost:8000/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:input.value}, function(res){
-                                        console.log(res);
-                                        if (!res.error) {
+                                confirmButtonText: 'Join Group'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Check if group has password (if password in sql table is blank then no password), if so, ask for password (validate password using backend), otherwise join
+                                    $.get('http://localhost:8000/groupByID?groupID=' + strGroupID, function(result){
+                                        if (result.Password) {
                                             Swal.fire({
-                                                title: 'Group Joined',
-                                                text: 'You have successfully joined the group "' + strGroupName + '"!',
-                                                icon: 'success'
-                                            });
-                                            addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
-                                            $.post('http://localhost:8000/picksMade', {groupID:strGroupID, userID:userID, week:1, picksLeft:7}, function(result){
-                                                console.log(result);
+                                                title: 'Enter Group Password',
+                                                text: 'Please enter the password for the group "' + strGroupName + '"',
+                                                input: 'password',
+                                                confirmButtonText: 'Join Group',
+                                                showCancelButton: true,
+                                                inputValidator: (value) => {
+                                                    if (!value || value.length < 3) {
+                                                        return 'Password must be at least 3 characters long!';
+                                                    }
+                                                }
+                                            }).then((input) => {
+                                                if (input.isConfirmed) {
+                                                    $.post('http://localhost:8000/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:input.value}, function(res){
+                                                        if (!res.error) {
+                                                            Swal.fire({
+                                                                title: 'Group Joined',
+                                                                text: 'You have successfully joined the group "' + strGroupName + '"!',
+                                                                icon: 'success'
+                                                            });
+                                                            addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
+                                                            addToPicksGroups(strGroupName, strOwnerName);
+                                                            let postData = {
+                                                                groupID: strGroupID,
+                                                                userID: userID
+                                                            }
+                                                            $.post('http://localhost:8000/picksLeft', postData, function(res){
+                                                            })
+                                                        } else {
+                                                            Swal.fire({
+                                                                title: 'Incorrect Password',
+                                                                text: 'Incorrect Password Given. Please try again.',
+                                                                icon: 'error'
+                                                            });
+                                                        }
+                                                    })
+                                                }
                                             })
                                         } else {
-                                            Swal.fire({
-                                                title: 'Incorrect Password',
-                                                text: 'Incorrect Password Given. Please try again.',
-                                                icon: 'error'
-                                            });
+                                            $.post('http://localhost:8000/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:''}, function(res){
+                                                if (res) {
+                                                    Swal.fire({
+                                                        title: 'Group Joined',
+                                                        text: 'You have successfully joined the group "' + strGroupName + '"!',
+                                                        icon: 'success'
+                                                    });
+                                                    addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
+                                                    addToPicksGroups(strGroupName, strOwnerName)
+                                                    let postData = {
+                                                        groupID: strGroupID,
+                                                        userID: userID
+                                                    }
+                                                    $.post('http://localhost:8000/picksLeft', postData, function(res){
+                                                    })
+                                                } else {
+                                                    Swal.fire({
+                                                        title: 'Error',
+                                                        text: 'There was an error joining the group. Please try again later.',
+                                                        icon: 'error'
+                                                    });
+                                                }
+                                            })
                                         }
                                     })
-                                }
-                            })
-                        } else {
-                            $.post('http://localhost:8000/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:''}, function(res){
-                                console.log(res);
-                                if (res) {
-                                    Swal.fire({
-                                        title: 'Group Joined',
-                                        text: 'You have successfully joined the group "' + strGroupName + '"!',
-                                        icon: 'success'
-                                    });
-                                    addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
-                                } else {
-                                    Swal.fire({
-                                        title: 'Error',
-                                        text: 'There was an error joining the group. Please try again later.',
-                                        icon: 'error'
-                                    });
                                 }
                             })
                         }
@@ -1026,88 +1131,527 @@
             })
         })
 
-        $(document).on('click', '#tblYourGroups tbody tr', function(){
+        $('#tblYourGroups tbody').on('click', 'tr', function(){
             let strGroupID = $(this).attr('data-value');
-            console.log(strGroupID);
+            groupID = strGroupID;
             displayGroupMembersCard(strGroupID);
         });
 
+        /*
+            Functions for displaying an user's made picks
+        */
+
+        // Create the cards for the user's picks
+        function createPicksCards(week, callback) {
+            let strHTML =  `<div class="columnPicks">
+                                <div  class="cardPicks">
+                                    <h5>Week ${week}'s Picks</h5>
+                                    <hr>
+                                    <ol id="week${week}" style="list-style: number; text-align: left;"><ol>
+                                </div>
+                            </div>`;
+            $('#divMemberPicks .card-body .row').append(strHTML);
+
+            if (typeof callback === 'function') {
+                callback();
+            }
+        }
+
+        function addPicksToCard(week, picks) {
+            picks.forEach((pick) => {
+                if (pick.Week == week) {
+                    let strHTML = `<li>${pick.PickedTeam}</li>`;
+                    $(`#week${week}`).append(strHTML);
+                }
+            })
+        }
+
+        function displayPicksPerWeek(numPicks){
+            let strHTML = `<ol class="week"></ol>`;
+            $('#divMemberPicks .card-body .divider').before(strHTML);
+            numPicks.forEach((pick) => {
+                let strHTML = `<li>${pick.PicksLeft} Picks</li>`;
+                $('#divMemberPicks .card-body .week').append(strHTML);
+            })
+        }
+
         $(document).on('click', '#tblGroupMembers tbody tr', function(){
+            let strUserID = $(this).attr('data-value');
+            let strGroupID = groupID;
             let strUsername = $(this).find('td').eq(0).text();
-            let strHTML = `
+            let strHTML = ` 
                 <div class="d-flex card-header justify-content-center">
                     <h3>${strUsername}'s Picks</h3>
                 </div>
                 <div class="d-flex card-body justify-content-center" style="flex-direction: column;">
-                    <table id="tblTeamsPicked" class="table table-striped" style="width: 100%;">
-                        <thead>
-                            <tr><th>Week</th><th>Team</th></tr>
-                        </thead>
-                        <tbody>
-                            
-                        </tbody>
-                    </table>
+                    <hr class="divider">
+                    <div class="row">
+                        
+                    </div>
                 </div>`;
             $('#divMemberPicks').html(strHTML);
             $('.card:visible').slideUp(function(){
                 $('#divMemberPicks').slideDown();
             })
-        })
 
-        $(document).on('click', '#tblPicksGroups tbody tr', function(){
-            let strGroupID = $(this).attr('data-value');
-            let intWeek = 1;
-            console.log(strGroupID);
-            $.get('http://localhost:8000/picksMade?groupID=' + strGroupID + '&week=' + intWeek, function(result){
-                console.log(result);
-                for (i = 1; i <= 15; i++) {
-                    if (i == 1){
-                        let strRow = '<tr><td>' + i + '</td><td>7</td><td>Yes</td></tr>';
-                        $('#tblWeeks tbody').append(strRow);
-                    } else {
-                        let strRow = '<tr><td>' + i + '</td><td>7</td><td>No</td></tr>';
-                        $('#tblWeeks tbody').append(strRow);
+            // Get numPicks for the selected user
+            $.get('http://localhost:8000/allPicksLeft?userID=' + strUserID + '&groupID=' + strGroupID, function(result){
+                displayPicksPerWeek(result.picksLeft);
+            }); 
+
+            // Get current week for displaying a user's picks (get week then subtract 1 so that you can't see this week's picks)
+            $.get('http://localhost:8000/weekNumber', function(weekNum){
+                let intWeekNumber = weekNum.weekNumber;
+                week = intWeekNumber - 1;
+
+                // Get the picks for the selected player (needs groupID and userID)
+                $.get('http://localhost:8000/selections?groupID=' + strGroupID + '&userID=' + strUserID, function(result){
+                    let picks = result.selections;
+                    for (let i = 1; i <= week; i++) {
+                        createPicksCards(i, function(){
+                            addPicksToCard(i, picks)
+                        })
                     }
-                }         
-                $('#divDashboard').slideToggle(function(){
-                    $('#divPicks').slideToggle();
+                    strHTML = `<button id="btnGoBack" class="btn btn-primary col-12 mt-3" type="button">Go Back</button>`
+                    $('#divMemberPicks .card-body').append(strHTML);
                 })
             })
         })
 
-        // Make Weekly Picks
-        $(document).on('click', '#tblWeeks tbody tr', function(){
-            let clickedWeek = $(this).find('td').eq(0).text();
-            console.log(clickedWeek);
-            $.get('http://localhost:8000/weekNumber', function(result){
-                let cfbWeekNumber = result.weekNumber;
-                console.log(cfbWeekNumber);
-                if (clickedWeek >= cfbWeekNumber){
-                    let strHTML = '<h2>Make Picks for Week ' + clickedWeek + '</h2>';
-                    $('#divMakePicks .card-header').html(strHTML);
-                    $.get('http://localhost:8000/weekData', function(result){
-                        console.log(result);
-                        let strHTML = "<option value=''>Select a Game</option>";
-                        $('#selGames').html(strHTML);
-                        result.forEach((game) => {
-                            strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + '</option>';
-                        })
-                        $('#selGames').html(strHTML).selectize({
-                            sortField: 'text',
+        $(document).on('click', '#btnGoBack', function(){
+            $('#divMemberPicks').slideUp(function(){
+                $('#divGroupMembers').slideDown();
+            })
+        });
+
+        /*
+            Functionality for making picks
+        */
+        
+        // Function to display the teams that the user has not yet picked
+        // Cahnge code so year updates automatically
+        function displayValidPicks() {
+            $.get('http://localhost:8000/year', function(result){
+                let year = result.year;
+                $.get(`http://localhost:8000/teams?year=${year}`, function(teams){
+                    let arrValidTeams = [];
+                    
+                    // Get all fbs teams and add them to arrValidTeams
+                    let promise1 = new Promise((resolve, reject) => {
+                        teams.forEach((team, index, array) => {
+                            arrValidTeams.push(team.school);
+                            if (index === array.length - 1) resolve();
                         });
-                        $('#divPicks').slideUp(function(){
-                            $('#divMakePicks').slideDown();
-                        })
                     })
-                } else {
+
+                    promise1.then(() => {
+                        // Get all the teams that the user has already picked
+                        $.get('http://localhost:8000/selections?groupID=' + groupID + '&userID=' + userID, function(alreadyPicked){
+                            let arrAlreadyPicked = [];
+
+                            // add all the teams that the user has already picked to arrAlreadyPicked
+                            let promise2 = new Promise((resolve, reject) => {
+                                if (alreadyPicked.selections.length < 1) {
+                                    resolve();
+                                } else {
+                                    alreadyPicked.selections.forEach((pick, index, array) => {
+                                        arrAlreadyPicked.push(pick.PickedTeam.split(' {')[0]);
+                                        if (index === array.length - 1) resolve();
+                                    })
+                                }
+                            })
+
+                            // Once all the teams have been added to arrAlreadyPicked, remove them from arrValidTeams
+                            promise2.then(() => {
+                                // Remove all the teams that the user has already picked from arrValidTeams
+                                let promise3 = new Promise((resolve, reject) => {
+                                    if(arrAlreadyPicked.length < 1) {
+                                        resolve();
+                                    } else {
+                                        arrAlreadyPicked.forEach((team, index, array) => {
+                                            let i = arrValidTeams.indexOf(team);
+                                            if (i > -1) {
+                                                arrValidTeams.splice(i, 1);
+                                            }
+                                            if (index === array.length - 1) resolve();
+                                        })
+                                    }
+                                })
+
+                                // Once all the teams have been removed from arrValidTeams, display the teams in the card
+                                promise3.then(() => {
+                                    arrValidTeams.forEach((team) => {
+                                        let strHTML = `<li id='${team}'>${team}</li>`;
+                                        $('#divMakePicks .scrollable ol').append(strHTML);
+                                    })
+                                })
+                            })
+                        })
+                    });
+                })
+            })
+        }
+        
+        // Displays the make picks card with needed information
+        $(document).on('click', '#tblPicksGroups tbody tr', function(){
+            groupID = $(this).attr('data-value');
+            $.get('http://localhost:8000/weekNumber', function(result){
+                let intWeekNumber = result.weekNumber;
+                week = intWeekNumber;
+
+                if (week == 16){
+                    week = 15;
+                }
+
+                let strHTML = '<h2>Make Picks for Week ' + intWeekNumber + '</h2>';
+                $('#divMakePicks .card-header').html(strHTML);
+                
+                strHTML =  `<div class="row2">
+                                <div class="columnYourGroups">
+                                    <div class="cardGroupsScrollable">
+                                        <div>
+                                            <h5>Teams Remaining to be Picked</h5>
+                                        </div>
+                                        <hr>
+                                        <div class="scrollable">
+                                            <ol style="list-style: none; padding: 0;">
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>`;
+                $('#divMakePicks .card-body').html(strHTML);
+                displayValidPicks();
+                $.get('http://localhost:8000/weekData', function(result){
+                    $.get('http://localhost:8000/picksLeft?userID=' + userID + '&groupID=' + groupID, function(picksLeft){
+                        let numPicks = picksLeft.picksLeft[0].PicksLeft;
+                        let gamesData = result
+
+                        if (numPicks == 0) {
+                            strHTML = `<p class="text-center">You no longer have picks in this group</p>`;
+                            $('#divMakePicks .card-body').append(strHTML);
+                            strHTML =  `<div class="d-flex col-12 justify-content-evenly">
+                                            <button id="btnBackToPicks" type="button" class="btn btn-danger col-12">Go Back</button>
+                                        </div>`
+                            $('#divMakePicks .card-body').append(strHTML);
+                            $('#divDashboard').slideUp(function(){
+                                $('#divMakePicks').slideDown();
+                            })
+                        } else {
+                            strHTML =  `<div class="row"></div>`
+                            $('#divMakePicks .card-body').append(strHTML);
+                            for (let i = 1; i <= numPicks; i++){
+                                strHTML =  `<div class="columnPicks">
+                                                <div class="cardPicks">
+                                                    <h5>Pick ${i}</h5>
+                                                    <hr>
+                                                    <label for="selGames${i}" class="form-label mb-2">Select a Game:</label>
+                                                    <select id="selGames${i}" class="form-label">
+                                                        <option></option>
+                                                    </select>
+                                                    <label for"selTeams${i}" class="form-label mb-2">Select a Team:</label>
+                                                    <select id="selTeams${i}">
+                                                        <option></option>
+                                                    </select>
+                                                    <button id="btnMakePick${i}" type="button" class="btn btn-success col-12 mt-3 btn-make-pick">Confirm Pick</button>
+                                                    <button id="btnChangePick${i}" type="button" class="btn btn-warning col-12 mt-3 btn-change-pick">Change Pick</button>
+                                                </div>
+                                            </div>`
+                                $('#divMakePicks .card-body .row').append(strHTML)
+                            }
+
+                            /*
+                                If user has made a pick in spot x, fill the game and team selectize boxes then disable the game and team selectize boxes, otherwise allow them to make a pick
+                            */
+                            $.get('http://localhost:8000/selectionsByCurrentWeek?groupID=' + groupID + '&userID=' + userID, function(result){
+                                let arrAlreadyPicked = result.selections;
+                                for (let i = 1; i <= numPicks; i++){
+                                    
+                                    // Check if the user has already made a pick in this spot
+                                    let match = arrAlreadyPicked.find(pick => pick.PickNum == i);
+                                    if(match) {
+                                        gameID = match.GameID;
+                                        $.get('http://localhost:8000/gameData?gameID=' + gameID, function(result){
+                                            let strGameID = result[0].id;
+                                            // Fill selGames{i} with all games then select the one the user has already picked
+                                            let strHTML = "<option></option>";
+                                            gamesData.forEach((game) => {
+                                                let date = new Date(game.start_date).toDateString();
+                                                strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
+                                            })
+                                            $(`#selGames${i}`).html(strHTML).selectize({
+                                                placeholder: 'Select a game',
+                                                sortField: 'text',
+                                                onChange: function(value) {
+                                                    // Get the selectize instance
+                                                    var selectizeInstance = $(`#selGames${i}`)[0].selectize;
+                                                    
+                                                    // Use getItem to retrieve the selected option's text
+                                                    var selectedOptionText = selectizeInstance.getItem(value).text();
+
+                                                    // Split the text into away and home teams
+                                                    var teams = selectedOptionText.split(" at ");
+                                                    var awayTeam = teams[0] + ` {${gamesData.find(game => game.id == value).away_conference}}`;
+                                                    var homeTeam = teams[1].split(" {")[0] + ` {${gamesData.find(game => game.id == value).home_conference}}`;
+
+                                                    // Use the teams as needed, e.g., populating another selectize box
+                                                    var $teamSelect = $(`#selTeams${i}`).selectize();
+                                                    var control = $teamSelect[0].selectize;
+                                                    control.clear();
+                                                    control.clearOptions();
+                                                    control.addOption({ value: awayTeam, text: awayTeam });
+                                                    control.addOption({ value: homeTeam, text: homeTeam });
+                                                    control.refreshOptions(false); // Refresh options without triggering onChange
+                                                }
+                                            });
+                                            $(`#selTeams${i}`).selectize({
+                                                placeholder: 'Select a team',
+                                                sortField: 'text'
+                                            });
+                                            $(`#selGames${i}`).val(strGameID);
+                                            $(`#selTeams${i}`).val(match.PickedTeam);
+
+                                            // Disable the selectize boxes
+                                            var selectizeGame = $(`#selGames${i}`)[0].selectize;
+                                            selectizeGame.setValue(strGameID);
+                                            selectizeGame.disable();
+                                            var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
+                                            selectizeTeam.setValue(match.PickedTeam);
+                                            selectizeTeam.disable();
+                                        })
+                                    } else {
+                                        strHTML = "<option></option>";
+                                        gamesData.forEach((game) => {
+                                            let date = new Date(game.start_date).toDateString();
+                                            strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
+                                        })
+                                        $(`#selGames${i}`).html(strHTML).selectize({
+                                            placeholder: 'Select a game',
+                                            sortField: 'text',
+                                            onChange: function(value) {
+                                                // Get the selectize instance
+                                                var selectizeInstance = $(`#selGames${i}`)[0].selectize;
+                                                
+                                                // Use getItem to retrieve the selected option's text
+                                                var selectedOptionText = selectizeInstance.getItem(value).text();
+
+                                                // Split the text into away and home teams
+                                                var teams = selectedOptionText.split(" at ");
+                                                var awayTeam = teams[0] + ` {${gamesData.find(game => game.id == value).away_conference}}`;
+                                                var homeTeam = teams[1].split(" {")[0] + ` {${gamesData.find(game => game.id == value).home_conference}}`;
+
+                                                // Use the teams as needed, e.g., populating another selectize box
+                                                var $teamSelect = $(`#selTeams${i}`).selectize();
+                                                var control = $teamSelect[0].selectize;
+                                                control.clear();
+                                                control.clearOptions();
+                                                control.addOption({ value: awayTeam, text: awayTeam });
+                                                control.addOption({ value: homeTeam, text: homeTeam });
+                                                control.refreshOptions(false); // Refresh options without triggering onChange
+                                            }
+                                        });
+                                        $(`#selTeams${i}`).selectize({
+                                            placeholder: 'Select a team',
+                                            sortField: 'text'
+                                        });
+                                    }
+
+                                    
+                                }
+                                strHTML =  `<div class="d-flex col-12 justify-content-evenly">
+                                                <button id="btnBackToPicks" type="button" class="btn btn-danger col-12">Go Back</button>
+                                            </div>`
+                                $('#divMakePicks .card-body .row').append(strHTML);
+                                $('#divDashboard').slideUp(function(){
+                                    $('#divMakePicks').slideDown();
+                                })
+                            })
+                        }
+                    })
+                })
+            })
+       })
+
+       // Go back to dashboard from make picks
+       $(document).on('click', '#btnBackToPicks', function(){
+            $('#divMakePicks').slideUp(function(){
+                $('#divDashboard').slideDown();
+            })
+       })
+       
+        // Submit one pick at a time, make sure the chosen team hasn't been picked already
+        $(document).on('click', '.btn-make-pick', function(){
+            let buttonID = $(this).attr('id');
+            // Extract the number from the id (assuming format btnMakePicksX)
+            var i = buttonID.replace('btnMakePick', '');
+            
+            let strTimeStart = $(`#selGames${i}`).text().split(" {")[1].split("}")[0];
+            let gameTime = new Date(strTimeStart);
+            let currentTime = new Date();
+            if (gameTime < currentTime) {
+                Swal.fire({
+                    title: 'Game Already Started',
+                    text: 'This game has already started. Please select a different game.',
+                    icon: 'error'
+                });
+            } else {
+                let strGameID = $(`#selGames${i}`).val();
+                let strTeamPicked = $(`#selTeams${i}`).val().split(" {")[0];
+                let validTeams = document.querySelectorAll('#divMakePicks .scrollable ol li');
+                let optionExists = false;
+                validTeams.forEach((team) => {
+                    if (team.id == strTeamPicked) {
+                        optionExists = true;
+                    }
+                })
+
+                // check if this selectize has been disabled
+                var selectizeGame = $(`#selGames${i}`)[0].selectize;
+                if (selectizeGame.isDisabled) {
                     Swal.fire({
-                        title: 'Week Passed',
-                        text: 'That week has passed or those games are about to begin, please select a different week.',
+                        title: 'Already Picked',
+                        text: 'This pick has already been made. Please select a different pick.',
                         icon: 'error'
                     })
+                }else if (!optionExists) {
+                    Swal.fire({
+                        title: 'Invalid Pick',
+                        text: 'This team is not a valid pick (Already picked or non-FBS team)! Please select a team from the list above.',
+                        icon: 'error'
+                    })
+                } else {
+                    $.get('http://localhost:8000/selections?groupID=' + groupID + '&userID=' + userID, function(result){
+                        let arrAlreadyPicked = result.selections;
+
+                        let blnPickedGame = false;
+                        let blnPickedTeam = false;
+                        
+                        if (arrAlreadyPicked.length > 0) {
+                            var promise = new Promise((resolve, reject) => {
+                                arrAlreadyPicked.forEach((picked, index, array) => {
+                                    if (strGameID == picked.GameID) {
+                                        blnPickedGame = true;
+                                    }
+                                    if (strTeamPicked == picked.PickedTeam.split(" {")[0]) {
+                                        blnPickedTeam = true;
+                                    }
+                                    if (index == array.length - 1) resolve();
+                                })
+                            })
+
+                            promise.then(() => {
+                                if (blnPickedGame) {
+                                    Swal.fire({
+                                        title: 'Game Already Picked',
+                                        text: 'This game has already been picked by you. Please select a different game.',
+                                        icon: 'error'
+                                    });
+                                } else if (blnPickedTeam) {
+                                    Swal.fire({
+                                        title: 'Team Already Picked',
+                                        text: 'This team has already been picked by you. Please select a different team.',
+                                        icon: 'error'
+                                    });
+                                } else {
+                                    let strTeam = $(`#selTeams${i}`).val();
+                                    let formData = {
+                                        groupID: groupID,
+                                        userID: userID,
+                                        week: week,
+                                        gameID: strGameID,
+                                        pickedTeam: strTeam,
+                                        pickNum: i
+                                    }
+                                    $.post('http://localhost:8000/selection', formData, function(result){
+                                        Swal.fire({
+                                            title: 'Pick Made',
+                                            text: 'Pick was successfully made!',
+                                            icon: 'success'
+                                        });
+                                        var selectizeGame = $(`#selGames${i}`)[0].selectize;
+                                        selectizeGame.disable();
+                                        var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
+                                        selectizeTeam.disable();
+                                        
+                                        // Remove the team from the list of valid picks
+                                        let team = strTeam.split(" {")[0];
+                                        $(`#divMakePicks .scrollable ol [id='${team}']`).remove();
+                                    })
+                                }
+                            })
+                        } else {
+                            let strTeam = $(`#selTeams${i}`).val();
+                            let formData = {
+                                groupID: groupID,
+                                userID: userID,
+                                week: week,
+                                gameID: strGameID,
+                                pickedTeam: strTeam,
+                                pickNum: i
+                            }
+                            $.post('http://localhost:8000/selection', formData, function(result){
+                                Swal.fire({
+                                    title: 'Pick Made',
+                                    text: 'Pick was successfully made!',
+                                    icon: 'success'
+                                });
+                                var selectizeGame = $(`#selGames${i}`)[0].selectize;
+                                selectizeGame.disable();
+                                var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
+                                selectizeTeam.disable();
+
+                                // Remove the team from the list of valid picks
+                                let team = strTeam.split(" {")[0];
+                                $(`#divMakePicks .scrollable ol [id='${team}']`).remove();
+                            })
+                        }
+                    })
                 }
-            })
+            }
         })
+
+        // Change a pick
+        $(document).on('click', '.btn-change-pick', function(){
+            let buttonID = $(this).attr('id');
+            // Extract the number from the id (assuming format btnMakePicksX)
+            var i = buttonID.replace('btnChangePick', '');
+
+            // check if this selectize has been disabled        (Add Code to delete pick and re-enable selectize)
+            var selectizeGame = $(`#selGames${i}`)[0].selectize;
+            if (selectizeGame.isDisabled) {
+                // Get the gameID and team that the user has already picked
+                let strGameID = $(`#selGames${i}`).val();
+                let strTeam = $(`#selTeams${i}`).val();
+
+                // Delete the pick
+                $.ajax({
+                    url: 'http://localhost:8000/selections?groupID=' + groupID + '&userID=' + userID + '&gameID=' + strGameID,
+                    type: 'DELETE',
+                    success: function(result){
+                        // Enable the selectize boxes
+                        selectizeGame.enable();
+                        var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
+                        selectizeTeam.enable();
+                        Swal.fire({
+                            title: 'Pick Deleted',
+                            text: 'Pick was successfully deleted! Please make a new pick.',
+                            icon: 'warning'
+                        });
+                        // Redisplay the valid picks
+                        $('#divMakePicks .scrollable ol').html('');
+                        displayValidPicks();
+                    }
+                })
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: "Can't Change Pick",
+                    text: "You can't change a pick that hasn't been made yet!"
+                })
+            }
+        });
+                
     </script>
 </body>
 </html>

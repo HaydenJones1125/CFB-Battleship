@@ -6,7 +6,7 @@ const dbSource = "battleship.db";
 const bcrypt = require('bcrypt')
 const schedule = require('node-schedule');
 const db = new sqlite3.Database(dbSource);
-const HTTP_PORT = 80;
+const HTTP_PORT = 8080;
 const bodyParser = require('body-parser');
 
 console.log("Listening on port " + HTTP_PORT);

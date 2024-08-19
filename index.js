@@ -13,6 +13,8 @@ var app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
+console.log(process.env.DB_SERVER);
+
 const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,

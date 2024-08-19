@@ -1,24 +1,45 @@
 const express = require('express');
 const cors = require('cors');
-const {v4:uuidv4, stringify} = require('uuid');
-const sqlite3 = require('sqlite3').verbose();
-const dbSource = "battleship.db";
-const bcrypt = require('bcrypt')
+const {v4: uuidv4, stringify} = require('uuid');
+const sql = require('mssql');
+const bcrypt = require('bcrypt');
 const schedule = require('node-schedule');
-const db = new sqlite3.Database(dbSource);
-const HTTP_PORT = 8080;
+const HTTP_PORT = 8000;
 const bodyParser = require('body-parser');
+require('dotenv').config();
 
-console.log("Listening on port " + HTTP_PORT);
+console.log('Listening on port ' +  HTTP_PORT);
 var app = express();
-app.use(bodyParser.urlencoded({
-    extended: true
-}));
-app.use(bodyParser.text());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
+const config = {
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_SERVER,
+    port: 1433,
+    database: process.env.DB_DATABASE,
+    authentication: {
+        type: 'default',
+    },
+    options: {
+        encrypt: true,
+    },
+};
+
+// Create a connection pool
+let poolPromise = sql.connect(config)
+    .then(pool => {
+        console.log('Connected to database');
+        return pool;
+    })
+    .catch(err => {
+        console.error('Database connection failed:', err);
+        process.exit(1);
+    });
+
 // Create a new user and return userID
-app.post('/users', (req, res, next) => {
+app.post('/users', async (req, res, next) => {
     let strFirstName = req.body.firstName;
     let strLastName = req.body.lastName;
     let strUsername = req.body.username;
@@ -29,466 +50,611 @@ app.post('/users', (req, res, next) => {
     if (!strFirstName || !strLastName || !strUsername || !strEmail || !strPassword) {
         res.status(400).send("Missing required fields");
     } else {
-        bcrypt.hash(strPassword, 10).then(hash => {
-            strPassword = hash;
-            let strCommand = "INSERT INTO tblUsers values (?, ?, ?, ?, ?, ?)";
-            let arrParameters = [strUserID, strEmail, strUsername, strPassword, strFirstName, strLastName];
-            db.run(strCommand, arrParameters, function(err, result) {
-                if(err){
-                    res.status(400).json({error:err.message});
-                } else {
-                    res.status(201).json({
-                        message: "success",
-                        userID: strUserID,
-                        email: strEmail
-                    })
-                }
-            });
-        }) 
-    }
-})
+        try {
+            const hashedPassword = await bcrypt.hash(strPassword, 10);
 
-// Get userID while verifying user exists
-app.get('/users', (req, res, next) => {
-    let strEmail = req.query.email;
-    let strPassword = req.query.password;
-    if(strEmail && strPassword){
-        //get hashed password from database for comparison
-        let strCommand = "SELECT Password FROM tblUsers WHERE Email = ?"
-        let arrParameters = [strEmail];
-        db.all(strCommand, arrParameters, (err, rows) => {
-            if(rows.length >= 1){
-                rows.forEach((row) => {
-                    let hashedPass = row.Password;
-                    bcrypt.compare(strPassword, hashedPass, function(err, result){
-                        if (result) {
-                            strCommand = "SELECT UserID FROM tblUsers WHERE Email = ? AND Password = ?"
-                            arrParameters = [strEmail, hashedPass];
-                            db.all(strCommand, arrParameters, (err, rows) => {
-                                if (rows) {
-                                    rows.forEach((row) => {
-                                        let strUserID = row.UserID;
-                                        res.status(201).json({
-                                            message:"success",
-                                            userID:strUserID
-                                        })
-                                    })
-                                } else {
-                                    res.status(400).json({error:err.message});
-                                }
-                            })
-                        } else {
-                            res.status(200).json({error:"Invalid Credentials"});
-                        }
-                    })
-                })
-            } else {
-                res.status(200).json({error:"Invalid Credentials"});
-            }
-        })
-    }
-})
+            // Use the existing pool connection
+            const pool = await poolPromise;
 
-app.get('/userID', (req, res, next) => {
-    let strSessionID = req.query.SessionID;
+            // Execute the query
+            const request = pool.request();
+            request.input('UserID', sql.UniqueIdentifier, strUserID);
+            request.input('Email', sql.VarChar, strEmail);
+            request.input('Username', sql.VarChar, strUsername);
+            request.input('Password', sql.VarChar, hashedPassword);
+            request.input('FirstName', sql.VarChar, strFirstName);
+            request.input('LastName', sql.VarChar, strLastName);
 
-    let strCommand = "SELECT UserID FROM tblSessions WHERE SessionID = ?";
-    db.get(strCommand, strSessionID, (err, result) => {
-        if (result) {
+            const result = await request.query(
+                `INSERT INTO tblUsers (UserID, Email, Username, Password, FirstName, LastName)
+                    VALUES (@UserID, @Email, @Username, @Password, @FirstName, @LastName)`
+            );
+
             res.status(201).json({
                 message: "success",
-                userID: result.UserID
-            })
-        } else {
-            res.status(200).json({error: "Invalid SessionID"});
+                userID: strUserID,
+                email: strEmail
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: err.message });
         }
-    })
-})
+    }
+});
 
-// Create a sessionID and return SessionID
-app.post('/sessions', (req, res, next) => {
+// Get userID while verifying user exists
+app.get('/users', async (req, res, next) => {
+    let strEmail = req.query.email;
+    let strPassword = req.query.password;
+
+    if (strEmail && strPassword) {
+        try {
+            const pool = await poolPromise;
+
+            // Step 1: Get the hashed password from the database
+            const result = await pool.request()
+                .input('Email', sql.VarChar, strEmail)
+                .query('SELECT Password FROM tblUsers WHERE Email = @Email');
+
+            if (result.recordset.length >= 1) {
+                let hashedPass = result.recordset[0].Password;
+
+                // Step 2: Compare the provided password with the hashed password
+                bcrypt.compare(strPassword, hashedPass, async function (err, match) {
+                    if (err) {
+                        return res.status(500).json({ error: 'Server error' });
+                    }
+
+                    if (match) {
+                        // Step 3: If password matches, retrieve the UserID
+                        const userResult = await pool.request()
+                            .input('Email', sql.VarChar, strEmail)
+                            .input('Password', sql.VarChar, hashedPass)
+                            .query('SELECT UserID FROM tblUsers WHERE Email = @Email AND Password = @Password');
+
+                        if (userResult.recordset.length >= 1) {
+                            let strUserID = userResult.recordset[0].UserID;
+                            res.status(201).json({
+                                message: "success",
+                                userID: strUserID
+                            });
+                        } else {
+                            res.status(400).json({ error: 'User not found' });
+                        }
+                    } else {
+                        res.status(200).json({ error: "Invalid Credentials" });
+                    }
+                });
+            } else {
+                res.status(200).json({ error: "Invalid Credentials" });
+            }
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: err.message });
+        }
+    } else {
+        res.status(400).json({ error: 'Missing email or password' });
+    }
+});
+
+// Gets userID from tblSessions using SessionID
+app.get('/userID', async (req, res, next) => {
+    let strSessionID = req.query.SessionID;
+    
+    try {
+        const pool = await poolPromise; // Reuse the existing connection pool
+        const result = await pool.request()
+            .input('SessionID', sql.UniqueIdentifier, strSessionID) // Use parameterized queries
+            .query('SELECT UserID FROM dbo.tblSessions WHERE SessionID = @SessionID');
+    
+        res.status(201).json({
+            message: "success",
+            userID: result.recordset[0].UserID
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
+    }
+});
+
+// Create a session and return SessionID
+app.post('/sessions', async (req, res, next) => {
     let strEmail = req.body.email;
     let strPassword = req.body.password;
     let strSessionID = uuidv4();
-    if (strEmail && strPassword){
-        let strCommand = "SELECT Password FROM tblUsers WHERE Email = ?"  ;                 //get hashed password from database
-        let arrParameters = [strEmail];
-        db.all(strCommand, arrParameters, (err, rows) => {
-            if (rows) {
-                rows.forEach((row) => {
-                    let hashedPass = row.Password
-                    bcrypt.compare(strPassword, hashedPass, function(err, result){          //used to compare if hashed password would be the normal password
-                        if (result) {
-                            strCommand = "SELECT UserID FROM tblUsers where Email = ? AND Password= ?"
-                            arrParameters = [strEmail, hashedPass]
-                            db.all(strCommand, arrParameters, (err, rows) => {
-                                if (rows) {
-                                    rows.forEach((row) => {
-                                        let strUserID = row.UserID;
-                                        strCommand = "INSERT INTO tblSessions VALUES(?,?)"
-                                        arrParameters = [strSessionID, strUserID]
-                                        db.run(strCommand, arrParameters, (err, result) => {
-                                            if (err) {
-                                                res.status(400).json({error:err.message})
-                                            } else {
-                                                res.status(201).json({
-                                                    message:"success",
-                                                    sessionid:strSessionID
-                                                })
-                                            }
-                                        })
-                                    })
-                                } else {
-                                    res.status(400).json({error:err.message});
-                                }
-                            })
-                        } else {
-                            res.status(400).json({error:err.message});
-                        }
-                    })
-                })
+
+    if (strEmail && strPassword) {
+        try {
+            const pool = await poolPromise;
+
+            // Step 1: Get the hashed password from the database
+            const result = await pool.request()
+                .input('Email', sql.VarChar, strEmail)
+                .query('SELECT Password FROM tblUsers WHERE Email = @Email');
+
+            if (result.recordset.length > 0) {
+                let hashedPass = result.recordset[0].Password;
+
+                // Step 2: Compare the provided password with the hashed password
+                const match = await bcrypt.compare(strPassword, hashedPass);
+
+                if (match) {
+                    // Step 3: Retrieve the UserID from the database
+                    const userResult = await pool.request()
+                        .input('Email', sql.VarChar, strEmail)
+                        .input('Password', sql.VarChar, hashedPass)
+                        .query('SELECT UserID FROM tblUsers WHERE Email = @Email AND Password = @Password');
+
+                    if (userResult.recordset.length > 0) {
+                        let strUserID = userResult.recordset[0].UserID;
+
+                        // Step 4: Insert a new session into tblSessions
+                        await pool.request()
+                            .input('SessionID', sql.UniqueIdentifier, strSessionID)
+                            .input('UserID', sql.UniqueIdentifier, strUserID)
+                            .query('INSERT INTO tblSessions (SessionID, UserID) VALUES (@SessionID, @UserID)');
+
+                        res.status(201).json({
+                            message: "success",
+                            sessionid: strSessionID
+                        });
+                    } else {
+                        res.status(400).json({ error: "User not found" });
+                    }
+                } else {
+                    res.status(400).json({ error: "Invalid password" });
+                }
             } else {
-                res.status(400).json({error:err.message});
+                res.status(400).json({ error: "Email not found" });
             }
-        })
-    } else {
-        res.status(400).json({error:"Not all parameters provided"});
-    }
-})
-
-//Delete SessionID from database
-app.delete('/sessions', (req, res, next) => {
-    let strSessionID = req.query.SessionID
-    let strCommand = "DELETE FROM tblSessions WHERE SessionID = ?";
-    let arrParameters = [strSessionID];
-    db.run(strCommand, arrParameters, function(err, result){
-        if(err){
-            res.status(400).json({error:err.message});
-        } else {
-            res.status(201).json({
-                message:"SessionID successfully deleted"
-            })
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: err.message });
         }
-    })
-})
+    } else {
+        res.status(400).json({ error: "Not all parameters provided" });
+    }
+});
 
-app.post('/groups', (req, res, next) => {
+// Delete SessionID from Database
+app.delete('/sessions', async (req, res, next) => {
+    let strSessionID = req.query.SessionID;
+
+    if (!strSessionID) {
+        res.status(400).json({ error: "SessionID is required" });
+        return;
+    }
+
+    try {
+        const pool = await poolPromise;
+
+        // Execute the delete command
+        const result = await pool.request()
+            .input('SessionID', sql.UniqueIdentifier, strSessionID)
+            .query('DELETE FROM tblSessions WHERE SessionID = @SessionID');
+
+        if (result.rowsAffected[0] > 0) {
+            res.status(201).json({
+                message: "SessionID successfully deleted"
+            });
+        } else {
+            res.status(400).json({ error: "SessionID not found" });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create a group and return groupID and groupName
+app.post('/groups', async (req, res, next) => {
     let strGroupName = req.body.groupName;
     let strOwnerID = req.body.ownerID;
-    let strOwner;
+    let strOwnerName;
     let strPassword = req.body.password;
     let strGroupID = uuidv4();
-    
-    // Only need to hash password if it is not empty
-    if (strPassword == '') {
-        let strCommand = "SELECT Username FROM tblUsers WHERE UserID = ?";
-        let arrParameters = [strOwnerID];
-        db.get(strCommand, arrParameters, (err, row) => {
-            if (row) {
-                strOwner = row.Username;
-                strCommand = "INSERT INTO tblGroups VALUES(?, ?, ?, ?, ?)";
-                arrParameters = [strGroupID, strGroupName, strOwner, strOwnerID, strPassword];
-                db.run(strCommand, arrParameters, function(err, result){
-                    if(err){
-                        res.status(400).json({error:err.message});
-                    } else {
-                        res.status(201).json({
-                            message:"success",
-                            groupID:strGroupID,
-                            groupName:strGroupName
-                        })
-                    }
-                })
-            } else {
-                res.status(400).json({error:err.message});
-            }
-        })
-    } else {
-        // get Owner username from tblUsers
-        bcrypt.hash(strPassword, 10).then(hash => {
-            strPassword = hash;
-            let strCommand = "SELECT Username FROM tblUsers WHERE UserID = ?";
-            let arrParameters = [strOwnerID];
-            db.get(strCommand, arrParameters, (err, row) => {
-                if (row) {
-                    strOwner = row.Username;
-                    strCommand = "INSERT INTO tblGroups VALUES(?, ?, ?, ?, ?)";
-                    arrParameters = [strGroupID, strGroupName, strOwner, strOwnerID, strPassword];
-                    db.run(strCommand, arrParameters, function(err, result){
-                        if(err){
-                            res.status(400).json({error:err.message});
-                        } else {
-                            res.status(201).json({
-                                message:"success",
-                                groupID:strGroupID,
-                                groupName:strGroupName
-                            })
-                        }
-                    })
-                } else {
-                    res.status(400).json({error:err.message});
-                }
-            })
-        })
-    }
-})
 
-app.get('/groups', (req, res, next) => {
-    let strCommand = "SELECT * FROM tblGroups";
-    db.all(strCommand, (err, rows) => {
-        if (rows) {
-            res.status(200).json(rows);
+    try {
+        const pool = await poolPromise;
+
+        // Get the owner username from tblUsers
+        const ownerResult = await pool.request()
+            .input('UserID', sql.UniqueIdentifier, strOwnerID)
+            .query('SELECT Username FROM tblUsers WHERE UserID = @UserID');
+
+        if (ownerResult.recordset.length > 0) {
+            strOwnerName = ownerResult.recordset[0].Username;
+
+            // Hash the password if it is not empty
+            if (strPassword !== '') {
+                strPassword = await bcrypt.hash(strPassword, 10);
+            }
+
+            // Insert into tblGroups
+            await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('GroupName', sql.VarChar, strGroupName)
+                .input('OwnerName', sql.VarChar, strOwnerName)
+                .input('OwnerID', sql.UniqueIdentifier, strOwnerID)
+                .input('Password', sql.VarChar, strPassword)
+                .query('INSERT INTO tblGroups (GroupID, GroupName, OwnerName, OwnerID, Password) VALUES (@GroupID, @GroupName, @OwnerName, @OwnerID, @Password)');
+
+            res.status(201).json({
+                message: "success",
+                groupID: strGroupID,
+                groupName: strGroupName
+            });
         } else {
-            res.status(400).json({error:err.message});
+            res.status(400).json({ error: "Owner not found" });
         }
-    })
-})
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get all groups
+app.get('/groups', async (req, res, next) => {
+    try {
+        const pool = await poolPromise;
+
+        // Execute the query to select all groups
+        const result = await pool.request()
+            .query('SELECT * FROM tblGroups');
+
+        if (result.recordset.length > 0) {
+            res.status(200).json(result.recordset);
+        } else {
+            res.status(200).json([]); // Return an empty array if no groups are found
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(400).json({ error: err.message });
+    }
+});
 
 // Get group by groupID
-app.get('/groupByID', (req, res, next) => {
+app.get('/groupByID', async (req, res, next) => {
     let strGroupID = req.query.groupID;
     
-    if(!strGroupID){
-        res.status(400).json({error:"Not all parameters provided"});
-    } else {
-        let strCommand = "SELECT * FROM tblGroups WHERE GroupID = ?";
-        let arrParameters = [strGroupID];
-        db.get(strCommand, arrParameters, (err, row) => {
-            if (row) {
-                res.status(200).json(row);
-            } else {
-                res.status(400).json({error:err.message});
-            }
-        })
+    if (!strGroupID) {
+        res.status(400).json({ error: "Not all parameters provided" });
+        return;
     }
-})
 
-// GroupID, GroupName, UserID, Username
-app.post('/groupmembers', (req, res, next) => {
+    try {
+        const pool = await poolPromise;
+
+        // Execute the query to select the group by ID
+        const result = await pool.request()
+            .input('GroupID', sql.UniqueIdentifier, strGroupID)
+            .query('SELECT * FROM tblGroups WHERE GroupID = @GroupID');
+
+        if (result.recordset.length > 0) {
+            res.status(200).json(result.recordset[0]); // Return the first matching row
+        } else {
+            res.status(400).json({ error: "Group not found" });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Add a user to a group
+app.post('/groupmembers', async (req, res, next) => {
     let strGroupID = req.body.groupID;
     let strGroupName = req.body.groupName;
     let strUserID = req.body.userID;
     let strGroupPassword = req.body.groupPassword;
-    let strUsername;
 
     if (!strGroupID || !strGroupName || !strUserID) {
-        res.status(400).json({error:'Not all parameters provided'});
-    } else {
-        //Get hashed group password from database
-        let strCommand = "SELECT Password FROM tblGroups WHERE GroupID = ?";
-        db.get(strCommand, strGroupID, (err, result) => {
-            if (result) {
-                let hashedPass = result.Password;
-                //if hashed password is empty, add user to group
-                if (hashedPass == '') {
-                    let strCommand = "SELECT Username FROM tblUsers WHERE UserID = ?";
-                    let arrParameters = [strUserID];
-                    db.get(strCommand, arrParameters, function(err, result){
-                        strUsername = result.Username;
-                        strCommand = "INSERT INTO tblGroupMembers VALUES (?, ?, ?, ?)"
-                        arrParameters = [strGroupID, strGroupName, strUserID, strUsername];
-                        db.run(strCommand, arrParameters, function(err, result){
-                            if (err) {
-                                res.status(400).json({error:err.message})
-                            } else {
-                                res.status(201).json({
-                                    message:"Member successfully added to the group"
-                                })
-                            }
-                        })
-                    })
-                } else {    //if hashed password is not empty, compare hashed group password with input password
-                    // Compare hashed group password with input password
-                    bcrypt.compare(strGroupPassword, hashedPass, function(err, result){
-                        // If passwords match, add user to group
-                        if (result) {
-                            let strCommand = "SELECT Username FROM tblUsers WHERE UserID = ?";
-                            let arrParameters = [strUserID];
-                            db.get(strCommand, arrParameters, function(err, result){
-                                strUsername = result.Username;
-                                strCommand = "INSERt INTO tblGroupMembers VALUES (?, ?, ?, ?)"
-                                arrParameters = [strGroupID, strGroupName, strUserID, strUsername];
-                                db.run(strCommand, arrParameters, function(err, result){
-                                    if (err) {
-                                        res.status(400).json({error:err.message})
-                                    } else {
-                                        res.status(201).json({
-                                            message:"Member successfully added to the group"
-                                        })
-                                    }
-                                })
-                            })
-                        } else {
-                            res.status(200).json({error:"Invalid Group Password"});
-                        }
-                    })
+        res.status(400).json({ error: 'Not all parameters provided' });
+        return;
+    }
+
+    try {
+        const pool = await poolPromise;
+
+        // Get hashed group password from the database
+        const groupResult = await pool.request()
+            .input('GroupID', sql.UniqueIdentifier, strGroupID)
+            .query('SELECT Password FROM tblGroups WHERE GroupID = @GroupID');
+
+        if (groupResult.recordset.length > 0) {
+            let hashedPass = groupResult.recordset[0].Password;
+
+            // If hashed password is empty, add user to group
+            if (!hashedPass) {
+                const userResult = await pool.request()
+                    .input('UserID', sql.UniqueIdentifier, strUserID)
+                    .query('SELECT Username FROM tblUsers WHERE UserID = @UserID');
+
+                if (userResult.recordset.length > 0) {
+                    let strUsername = userResult.recordset[0].Username;
+
+                    await pool.request()
+                        .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                        .input('GroupName', sql.VarChar, strGroupName)
+                        .input('UserID', sql.UniqueIdentifier, strUserID)
+                        .input('Username', sql.VarChar, strUsername)
+                        .query('INSERT INTO tblGroupMembers (GroupID, GroupName, UserID, Username) VALUES (@GroupID, @GroupName, @UserID, @Username)');
+
+                    res.status(201).json({
+                        message: "Member successfully added to the group"
+                    });
+                } else {
+                    res.status(400).json({ error: "User not found" });
+                }
+            } else {
+                // If hashed password is not empty, compare hashed group password with input password
+                const passwordMatch = await bcrypt.compare(strGroupPassword, hashedPass);
+
+                if (passwordMatch) {
+                    const userResult = await pool.request()
+                        .input('UserID', sql.UniqueIdentifier, strUserID)
+                        .query('SELECT Username FROM tblUsers WHERE UserID = @UserID');
+
+                    if (userResult.recordset.length > 0) {
+                        let strUsername = userResult.recordset[0].Username;
+
+                        await pool.request()
+                            .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                            .input('GroupName', sql.VarChar, strGroupName)
+                            .input('UserID', sql.UniqueIdentifier, strUserID)
+                            .input('Username', sql.VarChar, strUsername)
+                            .query('INSERT INTO tblGroupMembers (GroupID, GroupName, UserID, Username) VALUES (@GroupID, @GroupName, @UserID, @Username)');
+
+                        res.status(201).json({
+                            message: "Member successfully added to the group"
+                        });
+                    } else {
+                        res.status(400).json({ error: "User not found" });
+                    }
+                } else {
+                    res.status(200).json({ error: "Invalid Group Password" });
                 }
             }
-        })
+        } else {
+            res.status(400).json({ error: "Group not found" });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-app.get('/groupmembers', (req, res, next) => {
+// Get all group members by groupID
+app.get('/groupmembers', async (req, res, next) => {
     let strGroupID = req.query.groupID;
 
-    let strCommand = "SELECT * FROM tblGroupMembers WHERE GroupID = ?"
-    let arrParameters = [strGroupID];
-    db.all(strCommand, arrParameters, function(err, result){
-        if (err) {
-            res.status(400).json({error:err.message})
-        } else {
-            res.status(201).json({
-                message:"success",
-                members:result
-            })
-        }
-    })
-})
+    if (!strGroupID) {
+        res.status(400).json({ error: "GroupID is required" });
+        return;
+    }
+
+    try {
+        const pool = await poolPromise;
+
+        // Execute the query to select all group members by GroupID
+        const result = await pool.request()
+            .input('GroupID', sql.UniqueIdentifier, strGroupID)
+            .query('SELECT * FROM tblGroupMembers WHERE GroupID = @GroupID');
+
+        res.status(200).json({
+            message: "success",
+            members: result.recordset
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Get groups by UserID
-app.get('/groupsByUserID', (req, res, next) => {
+app.get('/groupsByUserID', async (req, res, next) => {
     let strUserID = req.query.userID;
 
-    let strCommand = "SELECT * FROM tblGroupMembers WHERE UserID = ?";
-    let arrParameters = [strUserID];
-    db.all(strCommand, arrParameters, function(err, result){
-        if (err) {
-            res.status(400).json({error:err.message})
-        } else {
-            res.status(201).json({
-                message:"success",
-                groups:result
-            })
-        }
-    })
-})
+    if (!strUserID) {
+        res.status(400).json({ error: "UserID is required" });
+        return;
+    }
 
-app.get('/groupOwner', (req, res, next) => {
+    try {
+        const pool = await poolPromise;
+
+        // Execute the query to select all groups by UserID
+        const result = await pool.request()
+            .input('UserID', sql.UniqueIdentifier, strUserID)
+            .query('SELECT * FROM tblGroupMembers WHERE UserID = @UserID');
+
+        res.status(200).json({
+            message: "success",
+            groups: result.recordset
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get group owner by groupID
+app.get('/groupOwner', async (req, res, next) => {
     let strGroupID = req.query.groupID;
 
-    let strCommand = "SELECT OwnerName FROM tblGroups WHERE GroupID = ?";
-    let arrParameters = [strGroupID];
-    db.get(strCommand, arrParameters, function(err, result){
-        if (err) {
-            res.status(400).json({error:err.message})
+    if (!strGroupID) {
+        res.status(400).json({ error: "GroupID is required" });
+        return;
+    }
+
+    try {
+        const pool = await poolPromise;
+
+        // Execute the query to select the owner name by GroupID
+        const result = await pool.request()
+            .input('GroupID', sql.UniqueIdentifier, strGroupID)
+            .query('SELECT OwnerName FROM tblGroups WHERE GroupID = @GroupID');
+
+        if (result.recordset.length > 0) {
+            res.status(200).json({
+                message: "here",
+                owner: result.recordset[0].OwnerName
+            });
         } else {
-            res.status(201).json({
-                message:"here",
-                owner:result.OwnerName
-            })
+            res.status(404).json({ error: "Group not found" });
         }
-    })
-})
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Send made picks to database
-app.post('/selection', (req, res, next) => {
+app.post('/selection', async (req, res, next) => {
     let strUserID = req.body.userID;
-    let strPickedTeam = req.body.pickedTeam;      // Can contain multiple teams
+    let strPickedTeam = req.body.pickedTeam;
     let strGroupID = req.body.groupID;
-    let strGameID = req.body.gameID;              // Can contain multiple gameIDs (same length as pickedTeams)
+    let strGameID = req.body.gameID;
     let strWeek = req.body.week;
-    let strPickNum = req.body.pickNum
+    let strPickNum = req.body.pickNum;
     let strSelectionCorrect = null;
 
     if (strUserID && strPickedTeam && strGroupID && strGameID && strWeek && strPickNum) {
-        let strCommand = "INSERT INTO tblSelections VALUES(?, ?, ?, ?, ?, ?, ?)";
-        let arrParameters = [strUserID, strPickedTeam, strGroupID, strGameID, strWeek, strPickNum, strSelectionCorrect];
-        db.run(strCommand, arrParameters, function(err, result){
-            if (err) {
-                res.status(400).json({error:err.message})
-            } else {
-                res.status(201).json({
-                    message:"success",
-                    userID:strUserID,
-                    groupID:strGroupID,
-                    week:strWeek,
-                    pickNum:strPickNum
-                })
-            }
-        })
+        try {
+            const pool = await poolPromise;
+
+            // Execute the insert command
+            await pool.request()
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .input('PickedTeam', sql.VarChar, strPickedTeam)
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('GameID', sql.Int, strGameID)
+                .input('Week', sql.Int, strWeek)
+                .input('PickNum', sql.Int, strPickNum)
+                .input('SelectionCorrect', sql.Bit, strSelectionCorrect)
+                .query('INSERT INTO tblSelections (UserID, PickedTeam, GroupID, GameID, Week, PickNum, selection_correct) VALUES (@UserID, @PickedTeam, @GroupID, @GameID, @Week, @PickNum, @SelectionCorrect)');
+
+            res.status(201).json({
+                message: "success",
+                userID: strUserID,
+                groupID: strGroupID,
+                week: strWeek,
+                pickNum: strPickNum
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
     } else {
-        res.status(400).json({error:"Not all parameters provided"});
+        res.status(400).json({ error: "Not all parameters provided" });
     }
 });
 
-//Get selections by groupID and userID
-app.get('/selections', (req, res, next) => {
+// Get selectiosn by groupID and userID
+app.get('/selections', async (req, res, next) => {
     let strGroupID = req.query.groupID;
     let strUserID = req.query.userID;
 
     if (strGroupID && strUserID) {
-        let strCommand = "SELECT * FROM tblSelections WHERE GroupID = ? AND UserID = ?";
-        let arrParameters = [strGroupID, strUserID];
-        db.all(strCommand, arrParameters, function(err, result){
-            if (err) {
-                res.status(400).json({error:err.message})
-            } else {
-                res.status(201).json({
-                    message:"success",
-                    selections:result
-                })
-            }
-        })
-    } else {
-        res.status(400).json({error:"Not all parameters provided"});
-    }
-})
+        try {
+            const pool = await poolPromise;
 
-// Delete selection by groupID, userID, and gameID
-app.delete('/selections', (req, res, next) => {
+            // Execute the query to select selections by GroupID and UserID
+            const result = await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .query('SELECT * FROM tblSelections WHERE GroupID = @GroupID AND UserID = @UserID');
+
+            res.status(200).json({
+                message: "success",
+                selections: result.recordset
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
+    } else {
+        res.status(400).json({ error: "Not all parameters provided" });
+    }
+});
+
+// Delete selection by groupID, userID and gameID
+app.delete('/selections', async (req, res, next) => {
     let strGroupID = req.query.groupID;
     let strUserID = req.query.userID;
     let strGameID = req.query.gameID;
 
     if (strGroupID && strUserID && strGameID) {
-        let strCommand = "DELETE FROM tblSelections WHERE GroupID = ? AND UserID = ? AND GameID = ?";
-        let arrParameters = [strGroupID, strUserID, strGameID];
-        db.run(strCommand, arrParameters, function(err, result){
-            if (err) {
-                res.status(400).json({error:err.message})
+        try {
+            const pool = await poolPromise;
+
+            // Execute the delete command
+            const result = await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .input('GameID', sql.Int, strGameID)
+                .query('DELETE FROM tblSelections WHERE GroupID = @GroupID AND UserID = @UserID AND GameID = @GameID');
+
+            if (result.rowsAffected[0] > 0) {
+                res.status(200).json({
+                    message: "success",
+                    groupID: strGroupID,
+                    userID: strUserID,
+                    gameID: strGameID
+                });
             } else {
-                res.status(201).json({
-                    message:"success",
-                    groupID:strGroupID,
-                    userID:strUserID,
-                    gameID:strGameID
-                })
+                res.status(404).json({ error: "Selection not found" });
             }
-        })
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: err.message });
+        }
     } else {
-        res.status(400).json({error:"Not all parameters provided"});
+        res.status(400).json({ error: "Not all parameters provided" });
     }
-})
+});
 
 // Get selections by groupID, userID, and current week
-app.get('/selectionsByCurrentWeek', (req, res, next) => {
+app.get('/selectionsByCurrentWeek', async (req, res, next) => {
     let strGroupID = req.query.groupID;
     let strUserID = req.query.userID;
 
     if (strGroupID && strUserID) {
-        let strCommand = "SELECT * FROM tblSelections WHERE GroupID = ? AND UserID = ? AND Week = ?";
-        let arrParameters = [strGroupID, strUserID, currentFootballWeekNumber];
-        db.all(strCommand, arrParameters, function(err, result){
-            if (err) {
-                res.status(400).json({error:err.message})
-            } else {
-                res.status(201).json({
-                    message:"success",
-                    selections:result
-                })
-            }
-        })
+        try {
+            const pool = await poolPromise;
+
+            // Execute the query to select selections by GroupID, UserID, and current week number
+            const result = await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .input('Week', sql.Int, currentFootballWeekNumber)
+                .query('SELECT * FROM tblSelections WHERE GroupID = @GroupID AND UserID = @UserID AND Week = @Week');
+
+            res.status(200).json({
+                message: "success",
+                selections: result.recordset
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
     } else {
-        res.status(400).json({error:"Not all parameters provided"});
+        res.status(400).json({ error: "Not all parameters provided" });
     }
 });
 
+// Get weeks game data
 app.get('/weekData', async (req, res, next) => {
-    getWeekData(function(weekData){
+    try {
+        const weekData = await getWeekData();
         res.status(200).json(weekData);
-    });
+    } catch (error) {
+        console.error('Error fetching week data:', error);
+        res.status(500).json({ error: 'Failed to fetch week data' });
+    }
 });
 
+// Get week number
 app.get('/weekNumber', (req, res, next) => {
     res.status(200).json({
         message:"success",
@@ -496,7 +662,7 @@ app.get('/weekNumber', (req, res, next) => {
     })
 });
 
-// get game start_date by game id
+// get game start_dtae by gameID
 app.get('/gameStartDate', (req, res, next) => {
     let strGameID = req.query.gameID;
 
@@ -506,123 +672,197 @@ app.get('/gameStartDate', (req, res, next) => {
 });
 
 // get game data by game id
-app.get('/gameData', (req, res, next) => {
-    let strGameID = req.query.gameID;
-
-    getGameData(strGameID, function(gameData){
+app.get('/gameData', async (req, res, next) => {
+    try {
+        const strGameID = req.query.gameID;
+        const gameData = await getGameData(strGameID);
         res.status(200).json(gameData);
-    });
+    } catch (error) {
+        console.error('Error fetching game data:', error);
+        res.status(500).json({ error: 'Failed to fetch game data' });
+    }
 });
 
-app.get('/teams', (req, res, next) => {
-    let year = req.query.year;
-
-    getTeams(year, function(teams){
+// get all teams
+app.get('/teams', async (req, res, next) => {
+    try {
+        const year = req.query.year;
+        const teams = await getTeams(year);
         res.status(200).json(teams);
-    })
+    } catch (error) {
+        console.error('Error fetching teams:', error);
+        res.status(500).json({ error: 'Failed to fetch teams' });
+    }
 });
+
 
 // Add to tblPicksLeft for when someone creates/joins a group for the first time
-app.post('/picksLeft', (req, res, next) => {
+app.post('/picksLeft', async (req, res, next) => {
     let strGroupID = req.body.groupID;
     let strUserID = req.body.userID;
     let intPicksLeft = 7;
     let intWeek = 1;
 
     if (strGroupID && strUserID) {
-        let strCommand = "INSERT INTO tblPicksLeft VALUES(?, ?, ?, ?)";
-        let arrParameters = [strUserID, strGroupID, intPicksLeft, intWeek];
-        db.run(strCommand, arrParameters, function(err, result){
-            if (err) {
-                res.status(400).json({error:err.message})
-            } else {
-                res.status(201).json({
-                    message:"success",
-                    groupID:strGroupID,
-                    userID:strUserID
-                })
-            }
-        })
+        try {
+            const pool = await poolPromise;
+
+            // Execute the insert command
+            await pool.request()
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('PicksLeft', sql.Int, intPicksLeft)
+                .input('Week', sql.Int, intWeek)
+                .query('INSERT INTO tblPicksLeft (UserID, GroupID, PicksLeft, Week) VALUES (@UserID, @GroupID, @PicksLeft, @Week)');
+
+            res.status(201).json({
+                message: "success",
+                groupID: strGroupID,
+                userID: strUserID
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
     } else {
-        res.status(400).json({error:"Not all parameters provided"});
+        res.status(400).json({ error: "Not all parameters provided" });
     }
 });
 
 // Get all picksLeft by groupID and userID
-app.get('/allPicksLeft', (req, res, next) => {
+app.get('/allPicksLeft', async (req, res, next) => {
     let strGroupID = req.query.groupID;
     let strUserID = req.query.userID;
 
     if (strGroupID && strUserID) {
-        let strCommand = "SELECT * FROM tblPicksLeft WHERE GroupID = ? AND UserID = ?";
-        let arrParameters = [strGroupID, strUserID];
-        db.all(strCommand, arrParameters, function(err, result){
-            if (err) {
-                res.status(400).json({error:err.message})
-            } else {
-                res.status(201).json({
-                    message:"success",
-                    picksLeft:result
-                })
-            }
-        })
+        try {
+            const pool = await poolPromise;
+
+            // Execute the query to select all picks left by GroupID and UserID
+            const result = await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .query('SELECT * FROM tblPicksLeft WHERE GroupID = @GroupID AND UserID = @UserID');
+
+            res.status(200).json({
+                message: "success",
+                picksLeft: result.recordset
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
     } else {
-        res.status(400).json({error:"Not all parameters provided"});
+        res.status(400).json({ error: "Not all parameters provided" });
     }
-})
+});
 
 // Get latest picksLeft by groupID and userID
-app.get('/picksLeft', (req, res, next) => {
+app.get('/picksLeft', async (req, res, next) => {
     let strGroupID = req.query.groupID;
     let strUserID = req.query.userID;
 
     if (strGroupID && strUserID) {
-        let strCommand = "SELECT PicksLeft FROM tblPicksLeft WHERE GroupID = ? AND UserID = ? ORDER BY Week DESC LIMIT 1;";
-        let arrParameters = [strGroupID, strUserID];
-        db.all(strCommand, arrParameters, function(err, result){
-            if (err) {
-                res.status(400).json({error:err.message})
-            } else {
-                res.status(201).json({
-                    message:"success",
-                    picksLeft:result
-                })
-            }
-        })
+        try {
+            const pool = await poolPromise;
+
+            // Execute the query to select PicksLeft for the most recent week by GroupID and UserID
+            const result = await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .query(`
+                    SELECT TOP 1 PicksLeft 
+                    FROM tblPicksLeft 
+                    WHERE GroupID = @GroupID AND UserID = @UserID 
+                    ORDER BY Week DESC
+                `);
+
+            res.status(200).json({
+                message: "success",
+                picksLeft: result.recordset[0]?.PicksLeft || 0
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
     } else {
-        res.status(400).json({error:"Not all parameters provided"});
+        res.status(400).json({ error: "Not all parameters provided" });
     }
-})
+});
 
 // Get the week the last time the user lost a pick
-app.get('/lastLostWeek', (req, res, next) => {
+app.get('/lastLostWeek', async (req, res, next) => {
     let strGroupID = req.query.groupID;
     let strUserID = req.query.userID;
 
     if (strGroupID && strUserID) {
-        let strCommand = "SELECT Week FROM tblPicksLeft AS t1 WHERE GroupID = ? AND UserID = ? AND PicksLeft < (SELECT PicksLeft FROM tblPicksLeft AS t2 WHERE t2.GroupID = t1.GroupID AND t2.UserID = t1.UserID AND t2.Week = t1.Week - 1) ORDER BY Week DESC LIMIT 1;";
-        let arrParameters = [strGroupID, strUserID];
-        db.all(strCommand, arrParameters, function(err, result){
-            if (err) {
-                res.status(400).json({error:err.message})
+        try {
+            const pool = await poolPromise;
+
+            // First, get the number of rows for the specified GroupID and UserID
+            const countResult = await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .query(`
+                    SELECT COUNT(*) AS TotalRows
+                    FROM tblPicksLeft 
+                    WHERE GroupID = @GroupID AND UserID = @UserID
+                `);
+
+            const totalRows = countResult.recordset[0].TotalRows;
+
+            let lastLostWeek;
+
+            if (totalRows === 1) {
+                // If there's only one row, set lastLostWeek to 1
+                lastLostWeek = 1;
             } else {
-                res.status(201).json({
-                    message:"success",
-                    lastLostWeek:result
-                })
+                // Execute the query to select the last week where the picks left decreased
+                const result = await pool.request()
+                    .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                    .input('UserID', sql.UniqueIdentifier, strUserID)
+                    .query(`
+                        SELECT TOP 1 Week 
+                        FROM tblPicksLeft AS t1 
+                        WHERE GroupID = @GroupID AND UserID = @UserID 
+                        AND PicksLeft < (
+                            SELECT PicksLeft 
+                            FROM tblPicksLeft AS t2 
+                            WHERE t2.GroupID = t1.GroupID 
+                            AND t2.UserID = t1.UserID 
+                            AND t2.Week = t1.Week - 1
+                        ) 
+                        ORDER BY Week DESC
+                    `);
+
+                lastLostWeek = result.recordset[0]?.Week || 1;
             }
-        })
+
+            res.status(200).json({
+                message: "success",
+                lastLostWeek: lastLostWeek
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
     } else {
-        res.status(400).json({error:"Not all parameters provided"});
+        res.status(400).json({ error: "Not all parameters provided" });
     }
 });
 
-app.get('/firstGame', (req, res, next) => {
-    getAllGames(function(gamesData){
+// Get first game of the year
+app.get('/firstGame', async (req, res, next) => {
+    try {
+        const gamesData = await getAllGames();
         res.status(200).json(gamesData[0]);
-    });
+    } catch (error) {
+        console.error('Error fetching first game:', error);
+        res.status(500).json({ error: 'Failed to fetch the first game' });
+    }
 });
 
+// Get the year
 app.get('/year', (req, res, next) => {
     res.status(200).json({
         message:"success",
@@ -638,7 +878,7 @@ const cron = require('node-cron');
 const fetch = require('node-fetch');
 
 let gameData = [];
-let year = new Date().getFullYear();
+let year = 2023 //new Date().getFullYear();
 let currentFootballWeekNumber;
 
 /*
@@ -656,402 +896,341 @@ function scheduleYearUpdate() {
 // Run the function to schedule the year update
 scheduleYearUpdate();
 
-function deleteDatabaseEntries(){
-    let strCommand = "DELETE FROM tblPicksLeft"
-    db.run(strCommand, function(err, result){
-        if (err) {
-            console.log(err);
-        } else {
-            strCommand = "DELETE FROM tblSelections"
-            db.run(strCommand, function(err, result){
-                if (err) {
-                    console.log(err);
-                } else {
-                    strCommand = "DELETE FROM tblGroupMembers"
-                    db.run(strCommand, function(err, result){
-                        if (err) {
-                            console.log(err);
-                        } else {
-                            strCommand = "DELETE FROM tblGroups"
-                            db.run(strCommand, function(err, result){
-                                if (err) {
-                                    console.log(err);
-                                }
-                            })
-                        }
-                    })
-                }
-            })
-        }
-    })
+// To manually delete all database entries
+//deleteDatabaseEntries();
+
+async function deleteDatabaseEntries() {
+    try {
+        const pool = await poolPromise;
+
+        // Delete from tblPicksLeft
+        await pool.request().query("DELETE FROM tblPicksLeft");
+
+        // Delete from tblSelections
+        await pool.request().query("DELETE FROM tblSelections");
+
+        // Delete from tblGroupMembers
+        await pool.request().query("DELETE FROM tblGroupMembers");
+
+        // Delete from tblGroups
+        await pool.request().query("DELETE FROM tblGroups");
+
+        console.log("All database entries deleted successfully.");
+    } catch (err) {
+        console.error("Error deleting database entries:", err);
+    }
 }
 
-// Gets All Games for the Current Season
-function getAllGames(callback) {
+async function dbGetAll(query, params = []) {
+    try {
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        params.forEach((param, index) => {
+            request.input(`param${index + 1}`, param);
+        });
+
+        const result = await request.query(query);
+        return result.recordset;
+    } catch (error) {
+        console.error('Error executing dbGetAll:', error);
+        throw error;
+    }
+}
+
+async function dbGet(query, params = []) {
+    try {
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        params.forEach((param, index) => {
+            request.input(`param${index + 1}`, param);
+        });
+
+        const result = await request.query(query);
+        return result.recordset[0];
+    } catch (error) {
+        console.error('Error executing dbGet:', error);
+        throw error;
+    }
+}
+
+async function dbRun(query, params = []) {
+    try {
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        params.forEach((param, index) => {
+            request.input(`param${index + 1}`, param);
+        });
+
+        await request.query(query);
+    } catch (error) {
+        console.error('Error executing dbRun:', error);
+        throw error;
+    }
+}
+
+async function getAllGames() {
     const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&seasonType=regular&division=fbs`;
 
-    fetch(apiEndpoint, {
-        method: 'GET',
-        headers: {
-            'accept': 'application/json',
-            'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Process the data
-        callback(data);
-    })
-    .catch(error => console.error('Error fetching data:', error));
+    try {
+        const response = await fetch(apiEndpoint, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+            }
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        throw error;
+    }
 }
 
-// Gets Current Football Week Number
-function getFootballWeekNumber(games, callback) {
-    const currentDate = new Date();   //2023 Weeks (for testing) Week1: "2023-08-26T18:30:00.000Z" Week2: "2023-09-07T23:30:00.000Z" Week3: "2023-09-14T23:30:00.000Z" Week4: "2023-09-21T23:30:00.000Z" Week5: "2023-09-28T23:30:00.000Z" Week6: "2023-10-05T00:00:00.000Z" Week7: "2023-10-10T23:00:00.000Z" Week8: "2023-10-17T23:00:00.000Z"  Week9: "2023-10-24T23:00:00.000Z" Week10: "2023-10-31T23:00:00.000Z" Week11: "2023-11-08T00:00:00.000Z" Week12: "2023-11-15T00:00:00.000Z" Week13: "2023-11-25T17:00:00.000Z" Week14: "2023-12-03T01:00:00.000Z"
+function getFootballWeekNumber(games) {
+    const currentDate = new Date("2023-09-28T23:30:00.000Z");
+    let weekNumber = 1;
 
-    let weekNumber = 1; // Default to week 1
-
-    for (let i = 0; i < games.length; i++) {
-        const gameDate = new Date(games[i].start_date);
-
-        // Check if the game date is earlier or equal to the current date and the week is <= 15
-        if (gameDate <= currentDate && games[i].week <= 15) {
-            weekNumber = games[i].week;
+    for (let game of games) {
+        const gameDate = new Date(game.start_date);
+        if (gameDate <= currentDate && game.week <= 15) {
+            weekNumber = game.week;
         }
     }
 
-    // After looping through all games, check if the date is after the last game of week 15
     const lastGame = games[games.length - 1];
     const lastGameDate = new Date(lastGame.start_date);
-    if (currentDate > lastGameDate && lastGame.week == 16) {
+    if (currentDate > lastGameDate && lastGame.week === 16) {
         weekNumber = 16;
     }
-
-    callback(weekNumber);
+    
+    return weekNumber;
 }
 
-// Gets data for the next week to make picks
-function getWeekData(callback) {
+async function getWeekData() {
+    console.log(currentFootballWeekNumber)
     const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&week=${currentFootballWeekNumber}&seasonType=regular&division=fbs`;
 
-    fetch(apiEndpoint, {
-        method: 'GET',
-        headers: {
-            'accept': 'application/json',
-            'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Process the data
-        callback(data);
-    })
-    .catch(error => console.error('Error fetching data:', error));
+    try {
+        const response = await fetch(apiEndpoint, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+            }
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        throw error;
+    }
 }
 
-// Gets a specific games start date and time
-function getStartDate(gameID, callback) {
-    const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&seasonType=regular&id=${gameID}`;
+async function addPicksLeft(weekNumber) {
+    try {
+        const groups = await dbGetAll("SELECT * FROM tblGroups");
 
-    fetch(apiEndpoint, {
-        method: 'GET',
-        headers: {
-            'accept': 'application/json',
-            'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+        for (let group of groups) {
+            await getMembers(weekNumber, group.GroupID);
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Process the data
-        callback(data);
-    })
-    .catch(error => console.error('Error fetching data:', error));
+    } catch (err) {
+        console.error('Error in addPicksLeft:', err);
+    }
 }
 
-// Gets data for a specific game
-function getGameData(gameID, callback) {
-    const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&seasonType=regular&id=${gameID}`;
+async function getMembers(weekNumber, groupID) {
+    try {
+        const members = await dbGetAll("SELECT * FROM tblGroupMembers WHERE GroupID = @param1", [groupID]);
 
-    fetch(apiEndpoint, {
-        method: 'GET',
-        headers: {
-            'accept': 'application/json',
-            'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+        for (let user of members) {
+            await getIncorrectPicks(weekNumber, user.UserID, user.GroupID);
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Process the data
-        callback(data);
-    })
-    .catch(error => console.error('Error fetching data:', error));
+    } catch (err) {
+        console.error('Error in getMembers:', err);
+    }
 }
 
-// Gets last week data to check if winner was correctly picked
-function getLastWeekData(callback) {
+async function getIncorrectPicks(weekNumber, userID, groupID) {
+    try {
+        const selections = await dbGetAll(
+            "SELECT * FROM tblSelections WHERE GroupID = @param1 AND UserID = @param2 AND Week = @param3",
+            [groupID, userID, weekNumber]
+        );
+        let numIncorrectPicks = selections.filter(selection => selection.selection_correct === 0).length;
+
+        const res = await dbGet(
+            "SELECT TOP 1 * FROM tblPicksLeft WHERE GroupID = @param1 AND UserID = @param2 ORDER BY Week DESC",
+            [groupID, userID]
+        );
+
+        numIncorrectPicks += res.PicksLeft - selections.length;
+        await addRowToPicksLeft(weekNumber, groupID, userID, res.PicksLeft - numIncorrectPicks);
+    } catch (err) {
+        console.error('Error in getIncorrectPicks:', err);
+    }
+}
+
+async function addRowToPicksLeft(weekNumber, groupID, userID, picksLeft) {
+    try {
+        await dbRun(
+            "INSERT INTO tblPicksLeft (UserID, GroupID, PicksLeft, Week) VALUES (@param1, @param2, @param3, @param4)",
+            [userID, groupID, picksLeft, weekNumber + 1]
+        );
+    } catch (err) {
+        console.error('Error in addRowToPicksLeft:', err);
+    }
+}
+
+async function checkWinners(weekNumber) {
+    try {
+        const selections = await dbGetAll("SELECT * FROM tblSelections WHERE Week = @param1", [weekNumber]);
+        const gamesData = await getLastWeekData();
+
+        for (let row of selections) {
+            const gameData = gamesData.find(game => game.id == row.GameID);
+            await checkCorrectPick(row, gameData);
+        }
+    } catch (err) {
+        console.error('Error in checkWinners:', err);
+    }
+}
+
+async function checkCorrectPick(row, data) {
+    const pickedTeam = row.PickedTeam.split(" {")[0];
+    const correctPick = pickedTeam === data.home_team
+        ? data.home_points > data.away_points
+        : data.away_points > data.home_points;
+
+    await updateSelection(row, correctPick ? 1 : 0);
+}
+
+async function updateSelection(row, correctPick) {
+    try {
+        await dbRun(
+            "UPDATE tblSelections SET selection_correct = @param1 WHERE UserID = @param2 AND GroupID = @param3 AND GameID = @param4 AND Week = @param5",
+            [correctPick, row.UserID, row.GroupID, row.GameID, row.Week]
+        );
+    } catch (err) {
+        console.error('Error in updateSelection:', err);
+    }
+}
+
+async function getLastWeekData() {
     const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&seasonType=regular&week=${currentFootballWeekNumber - 1}`;
 
-    fetch(apiEndpoint, {
-        method: 'GET',
-        headers: {
-            'accept': 'application/json',
-            'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Process the data
-        callback(data);
-    })
-    .catch(error => console.error('Error fetching data:', error));
-}
-
-// Start function to add a row to tblPicksLeft
-function addPicksLeft(weekNumber){
-    // Get all groups from database
-    let strCommand = "SELECT * FROM tblGroups";
-    db.all(strCommand, function(err, result){
-        if (err) {
-            console.log(err);
-        } else {
-            // For each group, get users to check number of correct picks
-            result.forEach((group) => {
-                let groupID = group.GroupID
-                getMembers(weekNumber, groupID);
-            })
-        }
-    });
-}
-
-// Function to get all members for a group for use to check incorrect picks
-function getMembers(weekNumber, groupID){
-    // Get users for each group
-    let strCommand = "SELECT * FROM tblGroupMembers where GroupID = ?";
-    db.all(strCommand, groupID, function(err, result){
-        if (err) {
-            console.log(err);
-        } else {
-            result.forEach((user) => {
-                // For each user, check incorrect picks
-                getIncorrectPicks(weekNumber, user.UserID, user.GroupID);
-            })
-        }    
-    })
-}
-
-// Function to get the number of incorrect picks for a user in a group
-function getIncorrectPicks(weekNumber, userID, groupID){
-    // Get selections per group/user
-    let strCommand = "SELECT * FROM tblSelections WHERE GroupID = ? AND UserID = ? and Week = ?";
-    let arrParameters = [groupID, userID, weekNumber];
-    db.all(strCommand, arrParameters, function(err, result){
-        if (err) {
-            console.log(err);
-        } else {
-            let numIncorrectPicks = 0;
-            // For each pick check if it was correct, if incorrect add 1 to numIncorrectPicks
-            let promise = new Promise((resolve, reject) => {
-                result.forEach((selection) => {
-                    // Check if the selection was incorrect (if so add 1 to numIncorrectPicks)
-                    if (selection.selection_correct == 0) {
-                        numIncorrectPicks++;
-                    }
-                })
-                resolve();
-            })
-            
-            // For each unused pick, add 1 to numIncorrectPicks
-            promise.then(() => {
-                let strQuery = "SELECT * FROM tblPicksLeft WHERE GroupID = ? AND UserID = ? ORDER BY Week DESC LIMIT 1;"
-                arrParameters = [groupID, userID];
-                db.get(strQuery, arrParameters, function(err, res){
-                    if (err) {
-                        console.log(err)
-                    } else {
-                        // Check if the user has selected all picks by checking if length of the result from the strCommand query is equal to PicksLeft
-                        if (result.length == res.PicksLeft) {
-                            addRowToPicksLeft(weekNumber, groupID, userID, (res.PicksLeft - numIncorrectPicks));
-                        } else {
-                            numIncorrectPicks = numIncorrectPicks + res.PicksLeft - result.length;
-                            addRowToPicksLeft(weekNumber, groupID, userID, (res.PicksLeft - numIncorrectPicks));
-                        }
-                    }
-                })
-            })
-        }
-    })
-}
-
-// End Function to add a row to tblPicksLeft
-function addRowToPicksLeft(weekNumber, groupID, userID, picksLeft){
-    let strCommand = "INSERT INTO tblPicksLeft VALUES(?, ?, ?, ?)";
-    let arrParameters = [userID, groupID, picksLeft, (weekNumber + 1)];
-    db.run(strCommand, arrParameters, function(err, result){
-        if (err) {
-            console.log(err);
-        }
-    })
-
-}
-
-// Check if winner was correctly picked then update database for each selection
-function checkWinners(weekNumber, callback){
-    // Get all selections from database for the week
-    let strCommand = "SELECT * FROM tblSelections WHERE Week = ?";
-    let arrParameters = [weekNumber];
-    db.all(strCommand, arrParameters, function(err, result){
-        if (err) {
-            console.log(err);
-        } else {
-            let totalSelections = result.length;
-            let processedSelections = 0;
-            
-            getLastWeekData(function(data){
-                let gamesData = data;
-                // For each selection, check if winner was correctly picked
-                result.forEach((row) => {
-                    getGameByID(row.GameID, gamesData, function(gameData){
-                        checkCorrectPick(row, gameData, function(){
-                            processedSelections++;
-                            if (processedSelections === totalSelections) {
-                                callback();
-                            }
-                        });
-                    });
-                });
-            })
-        }
-    })
-}
-
-function getGameByID(gameID, gamesData, callback){
-    callback(gamesData.find(game => game.id == gameID));
-}
-
-// Checks one pick at a time and updates database, used in checkWinners
-function checkCorrectPick(row, data, callback){
-    // Split the picked team from conference (string comes as "team {confrence}")
-    let pickedTeam = row.PickedTeam.split(" {")[0];
-
-    // Check if winner was correctly picked
-    let correctPick, pickedTeamScore, otherTeamScore;
-    if (pickedTeam == data.home_team){
-        pickedTeamScore = data.home_points;
-        otherTeamScore = data.away_points;
-    } else {
-        pickedTeamScore = data.away_points;
-        otherTeamScore = data.home_points;
-    }
-
-    // Update database with correct pick (1 for correct, 0 for incorrect)
-    if (pickedTeamScore > otherTeamScore){
-        correctPick = 1;
-        updateSelection(row, correctPick, function(){
-            callback();
+    try {
+        const response = await fetch(apiEndpoint, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+            }
         });
-        
-    } else {
-        correctPick = 0;
-        updateSelection(row, correctPick, function(){
-            callback();
-        });
-
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching last week data:', error);
+        throw error;
     }
 }
 
-function updateSelection(row, correctPick, callback){
-    let strCommand = "UPDATE tblSelections SET selection_correct = ? WHERE UserID = ? AND GroupID = ? AND GameID = ? AND Week = ?";
-    let arrParameters = [correctPick, row.UserID, row.GroupID, row.GameID, row.Week];
-    db.run(strCommand, arrParameters, function(err, result){
-        if (err) {
-            console.log(err);
-            callback();
-        } else {
-            callback();
-        }
-    })
-};
+async function getGameData(gameID) {
+    const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&seasonType=regular&id=${gameID}`;
 
-/*
-    Get all fbs teams for display
-*/
-function getTeams(year, callback){
+    try {
+        const response = await fetch(apiEndpoint, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+            }
+        });
+        return await response.json();
+    } catch (error) {
+        console.error(`Error fetching data for game ID ${gameID}:`, error);
+        throw error;
+    }
+}
+
+async function getTeams(year) {
     const apiEndpoint = `https://api.collegefootballdata.com/teams/fbs?year=${year}`;
 
-    fetch(apiEndpoint, {
-        method: 'GET',
-        headers: {
-            'accept': 'application/json',
-            'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Process the data
-        callback(data);
-    })
-    .catch(error => console.error('Error fetching data:', error));
-}
-
-// Manually test (just change date in getCollegeFootballWeekNumber)
-//getAllGames(function(gamesData){
-//    let gameData = gamesData;
-//    getFootballWeekNumber(gameData, function(weekNumber){
-//        currentFootballWeekNumber = weekNumber;
-//       checkWinners((weekNumber - 1), function(){
-//            addPicksLeft((weekNumber - 1));
-//        });
-//    });  
-//})
-
-/*
-    Functionality to run winner checks and to update week number
-*/
-function scheduleChecks(){
-    getAllGames(function(gamesData){
-        let gameData = gamesData;
-        getFootballWeekNumber(gameData, function(weekNumber){
-            currentFootballWeekNumber = weekNumber;
-            getLastGameOfWeekStart(gameData, weekNumber, function(lastGameStart){
-                let scheduleRunTime;
-                let scheduledCheck;
-                
-                // Check if lastGameStart is null or in the past, start rerunning function on August 15
-                if (!lastGameStart || new Date(lastGameStart) < new Date()) {
-                    // Get today's date and set the year to next year, and date to August 15
-                    let nextYear = new Date().getFullYear() + 1;
-                    scheduleRunTime = new Date(nextYear, 7, 15, 0, 0, 0); // August is month 7 (0-indexed)
-                    scheduledCheck = schedule.scheduleJob(scheduleRunTime, function(){
-                        scheduleChecks()
-                    })
-                } else {
-                    // Add 6 hours to last game start time to ensure all games are finished
-                    scheduleRunTime = new Date(lastGameStart);
-                    scheduleRunTime.setTime(scheduleRunTime.getTime() + (6 * 60 * 60 * 1000)); // Add 6 hours
-                    scheduledCheck = schedule.scheduleJob(scheduleRunTime, function(){
-                        checkWinners((weekNumber - 1), function(){
-                            addPicksLeft((weekNumber - 1), function(){
-                                scheduleChecks();
-                            });   
-                        });   
-                    });
-                }             
-            });
+    try {
+        const response = await fetch(apiEndpoint, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'Authorization': 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+            }
         });
-    });
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching teams data:', error);
+        throw error;
+    }
 }
 
-function getLastGameOfWeekStart(gameData, weekNumber, callback){
-    // Filter games by the specified week
-    let gamesForWeek = gameData.filter(game => game.week === weekNumber);
+async function scheduleChecks() {
+    try {
+        const gamesData = await getAllGames();
+        const weekNumber = getFootballWeekNumber(gamesData);
 
-    // Sort games by start_date in descending order
-    gamesForWeek.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+        currentFootballWeekNumber = weekNumber;
+        const lastGameStart = await getLastGameOfWeekStart(gamesData, weekNumber);
 
-    // Return the start_date of the last game, or null if no games found
-    callback(gamesForWeek.length > 0 ? gamesForWeek[0].start_date : null);
+        let scheduleRunTime;
+        if (!lastGameStart || new Date(lastGameStart) < new Date()) {
+            const nextYear = new Date().getFullYear() + 1;
+            scheduleRunTime = new Date(nextYear, 7, 15, 0, 0, 0);
+        } else {
+            scheduleRunTime = new Date(lastGameStart);
+            scheduleRunTime.setHours(scheduleRunTime.getHours() + 6);
+        }
+
+        console.log(`Scheduled check for: ${scheduleRunTime}`);
+        schedule.scheduleJob(scheduleRunTime, async () => {
+            await checkWinners(weekNumber - 1);
+            await addPicksLeft(weekNumber - 1);
+            scheduleChecks();
+        });
+    } catch (err) {
+        console.error('Error scheduling checks:', err);
+    }
+}
+
+async function getLastGameOfWeekStart(gameData, weekNumber) {
+    const gamesForWeek = gameData.filter(game => game.week === weekNumber)
+                                  .sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+
+    return gamesForWeek.length > 0 ? gamesForWeek[0].start_date : null;
 }
 
 scheduleChecks();
+
+/*      To manually run the game checks
+async function runGameChecks() {
+    try {
+        // Get all games for the current season
+        const gamesData = await getAllGames();
+
+        // Determine the current football week number
+        const weekNumber = getFootballWeekNumber(gamesData);
+        currentFootballWeekNumber = weekNumber;
+
+        // Check winners for the previous week
+        await checkWinners(weekNumber - 1);
+
+        // Add picks left for the previous week
+        await addPicksLeft(weekNumber - 1);
+
+    } catch (error) {
+        console.error('Error running game checks:', error);
+    }
+}
+
+runGameChecks();
+*/
 
 app.listen(HTTP_PORT);

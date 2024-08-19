@@ -285,7 +285,7 @@
         function logout() {
             let strSessionID = sessionStorage.getItem('SessionID')
             $.ajax({
-                url: 'http://localhost:8080/sessions?SessionID=' + strSessionID,
+                url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//sessions?SessionID=' + strSessionID,
                 type: 'DELETE',
                 success: function(){
                     sessionStorage.removeItem('SessionID');
@@ -335,7 +335,7 @@
 
         // getUserID to assign to global variable
         function getUserID(callback) {
-            $.get('http://localhost:8080/userID?SessionID=' + sessionStorage.getItem('SessionID'), function(result){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//userID?SessionID=' + sessionStorage.getItem('SessionID'), function(result){
                 if(result.message == "success") {
                     callback(result.userID)
                 } else {
@@ -349,7 +349,7 @@
 
         // Function to get all groups
         function getGroups(callback) {
-            $.get('http://localhost:8080/groups', function(result){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groups', function(result){
                 callback(result);
             });
         }
@@ -360,7 +360,7 @@
                 var promise = new Promise((resolve, reject) => {
                     
                     groups.forEach((value, index, array) => {
-                        $.get('http://localhost:8080/groupmembers?groupID=' + value.GroupID, function(result){
+                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupmembers?groupID=' + value.GroupID, function(result){
                             let arrMembers = result.members;
                             let numMembers = arrMembers.length;
                             let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + value.OwnerName + '</td><td>' + numMembers + '</td></tr>'
@@ -391,7 +391,7 @@
 
         // Get the groups that the user is a part of
         function getYourGroups(callback) {
-            $.get('http://localhost:8080/groupsByUserID?userID=' + userID, function(result){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupsByUserID?userID=' + userID, function(result){
                 callback(result);
             })
         }
@@ -403,8 +403,8 @@
                 var promise = new Promise((resolve, reject) => {
                     
                     groups.forEach((value, index, array) => {
-                        $.get('http://localhost:8080/groupByID?groupID=' + value.GroupID, function(groupInfo){
-                            $.get('http://localhost:8080/groupmembers?groupID=' + value.GroupID, function(result){
+                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupByID?groupID=' + value.GroupID, function(groupInfo){
+                            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupmembers?groupID=' + value.GroupID, function(result){
                                 let arrMembers = result.members;
                                 let numMembers = arrMembers.length;
                                 let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + groupInfo.OwnerName + '</td><td>' + numMembers + '</td></tr>'
@@ -435,7 +435,7 @@
         }
 
         function displayGroupMembersCard(groupID) {
-            $.get('http://localhost:8080/groupmembers?groupID=' + groupID, function(result){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupmembers?groupID=' + groupID, function(result){
                 let members = result.members;
                 let strHTML = `
                     <div class="d-flex card-header justify-content-center">
@@ -458,8 +458,8 @@
                 
                 let promise = new Promise((resolve, reject) => {
                     members.forEach((member, index, array) => {
-                        $.get('http://localhost:8080/picksLeft?userID=' + member.UserID + '&groupID=' + groupID, function(result){
-                            $.get('http://localhost:8080/lastLostWeek?userID=' + member.UserID + '&groupID=' + groupID, function(lastLostWeek){
+                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//picksLeft?userID=' + member.UserID + '&groupID=' + groupID, function(result){
+                            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//lastLostWeek?userID=' + member.UserID + '&groupID=' + groupID, function(lastLostWeek){
                                 // Check if lastLostWeek is empty (no picks lost)
                                 if (lastLostWeek.lastLostWeek.length < 1) {
                                     lastLostWeek.lastLostWeek = [{Week: '1'}];
@@ -539,7 +539,7 @@
                 var promise = new Promise((resolve, reject) => {
                     
                     groups.forEach((value, index, array) => {
-                        $.get('http://localhost:8080/groupByID?groupID=' + value.GroupID, function(groupInfo){
+                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupByID?groupID=' + value.GroupID, function(groupInfo){
                             let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + groupInfo.OwnerName + '</td></tr>'
                             $('#tblPicksGroups tbody').append(strRow);
                             if (index === array.length -1) resolve();
@@ -608,11 +608,11 @@
                     icon: "error"
                 });
             } else {
-                $.get('http://localhost:8080/users?email=' + strEmail + '&password=' + strPassword, function(result){
+                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//users?email=' + strEmail + '&password=' + strPassword, function(result){
                     if (!result.error){
                         let strUserID = result.userID;
                         userID = strUserID;     //set globalUserID
-                        $.post('http://localhost:8080/sessions', {email: strEmail, password: strPassword}, function(result){
+                        $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//sessions', {email: strEmail, password: strPassword}, function(result){
                             if(result.Error){
                                 Swal.fire({
                                     title: "Oops",
@@ -688,7 +688,7 @@
                 };
             
                 // call post to users to create a new user
-                $.post('http://localhost:8080/users', formData, function(result){
+                $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//users', formData, function(result){
                     if (result.Error){
                         Swal.fire({
                             title: "Oops!",
@@ -697,7 +697,7 @@
                         })
                     } else {
                         userID = result.userID;
-                        $.post('http://localhost:8080/sessions', {email: strEmail, password: strPassword}, function(result){
+                        $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//sessions', {email: strEmail, password: strPassword}, function(result){
                             if(result.Error){
                                 Swal.fire({
                                     title: "Oops",
@@ -885,7 +885,7 @@
                     if (result.isConfirmed) {
                         let strSessionID = sessionStorage.getItem('SessionID')
                         $.ajax({
-                            url: 'http://localhost:8080/sessions?SessionID=' + strSessionID,
+                            url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//sessions?SessionID=' + strSessionID,
                             type: 'DELETE',
                             success: function(){
                                 sessionStorage.removeItem('SessionID');
@@ -972,8 +972,8 @@
                                 password: strGroupPassword
                             }
 
-                            $.post('http://localhost:8080/groups', formData, function(result){
-                                $.post('http://localhost:8080/groupmembers', {groupID:result.groupID, groupName:result.groupName, userID:userID, groupPassword:strGroupPassword}, function(res){
+                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groups', formData, function(result){
+                                $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupmembers', {groupID:result.groupID, groupName:result.groupName, userID:userID, groupPassword:strGroupPassword}, function(res){
                                     if (!password.value) {
                                         Swal.fire({
                                             title: 'Group Created',
@@ -986,10 +986,10 @@
                                             week: 1,
                                             picksLeft: 7
                                         };
-                                        $.get('http://localhost:8080/groupmembers?groupID=' + result.groupID, function(groupMembers){
+                                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupmembers?groupID=' + result.groupID, function(groupMembers){
                                             let arrMembers = groupMembers.members;
                                             let numMembers = arrMembers.length;
-                                            $.get('http://localhost:8080/groupOwner?groupID=' + result.groupID, function(owner){
+                                            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupOwner?groupID=' + result.groupID, function(owner){
                                                 addGroupRow(result.groupName, owner.owner, numMembers);
                                                 addYourGroupRow(result.groupName, owner.owner, numMembers);
                                                 addToPicksGroups(result.groupName, owner.owner);
@@ -1007,7 +1007,7 @@
                                     groupID: result.groupID,
                                     userID: userID
                                 }
-                                $.post('http://localhost:8080/picksLeft', postData, function(res){
+                                $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//picksLeft', postData, function(res){
                                 })
                             });                           
                         })
@@ -1023,7 +1023,7 @@
             let strNumMembers = $(this).find('td').eq(2).text();
             let strGroupID = $(this).attr('data-value');
             // Get first game to check if season has started
-            $.get('http://localhost:8080/firstGame', function(game){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//firstGame', function(game){
                 let gameStartTime = game.start_date;
                 let gameStart = checkGameStart(gameStartTime);
                 if (gameStart) {
@@ -1035,7 +1035,7 @@
                     return;
                 } else {
                     // Get groupMembers to check if user is in group
-                    $.get('http://localhost:8080/groupmembers?groupID=' + strGroupID, function(result){
+                    $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupmembers?groupID=' + strGroupID, function(result){
                         let arrMembers = result.members;
                         let blnUserInGroup = false;
                         arrMembers.forEach((member) => {
@@ -1059,7 +1059,7 @@
                             }).then((result) => {
                                 if (result.isConfirmed) {
                                     // Check if group has password (if password in sql table is blank then no password), if so, ask for password (validate password using backend), otherwise join
-                                    $.get('http://localhost:8080/groupByID?groupID=' + strGroupID, function(result){
+                                    $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupByID?groupID=' + strGroupID, function(result){
                                         if (result.Password) {
                                             Swal.fire({
                                                 title: 'Enter Group Password',
@@ -1074,7 +1074,7 @@
                                                 }
                                             }).then((input) => {
                                                 if (input.isConfirmed) {
-                                                    $.post('http://localhost:8080/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:input.value}, function(res){
+                                                    $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:input.value}, function(res){
                                                         if (!res.error) {
                                                             Swal.fire({
                                                                 title: 'Group Joined',
@@ -1087,7 +1087,7 @@
                                                                 groupID: strGroupID,
                                                                 userID: userID
                                                             }
-                                                            $.post('http://localhost:8080/picksLeft', postData, function(res){
+                                                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//picksLeft', postData, function(res){
                                                             })
                                                         } else {
                                                             Swal.fire({
@@ -1100,7 +1100,7 @@
                                                 }
                                             })
                                         } else {
-                                            $.post('http://localhost:8080/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:''}, function(res){
+                                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:''}, function(res){
                                                 if (res) {
                                                     Swal.fire({
                                                         title: 'Group Joined',
@@ -1113,7 +1113,7 @@
                                                         groupID: strGroupID,
                                                         userID: userID
                                                     }
-                                                    $.post('http://localhost:8080/picksLeft', postData, function(res){
+                                                    $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//picksLeft', postData, function(res){
                                                     })
                                                 } else {
                                                     Swal.fire({
@@ -1197,17 +1197,17 @@
             })
 
             // Get numPicks for the selected user
-            $.get('http://localhost:8080/allPicksLeft?userID=' + strUserID + '&groupID=' + strGroupID, function(result){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//allPicksLeft?userID=' + strUserID + '&groupID=' + strGroupID, function(result){
                 displayPicksPerWeek(result.picksLeft);
             }); 
 
             // Get current week for displaying a user's picks (get week then subtract 1 so that you can't see this week's picks)
-            $.get('http://localhost:8080/weekNumber', function(weekNum){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//weekNumber', function(weekNum){
                 let intWeekNumber = weekNum.weekNumber;
                 week = intWeekNumber - 1;
 
                 // Get the picks for the selected player (needs groupID and userID)
-                $.get('http://localhost:8080/selections?groupID=' + strGroupID + '&userID=' + strUserID, function(result){
+                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//selections?groupID=' + strGroupID + '&userID=' + strUserID, function(result){
                     let picks = result.selections;
                     for (let i = 1; i <= week; i++) {
                         createPicksCards(i, function(){
@@ -1233,9 +1233,9 @@
         // Function to display the teams that the user has not yet picked
         // Cahnge code so year updates automatically
         function displayValidPicks() {
-            $.get('http://localhost:8080/year', function(result){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//year', function(result){
                 let year = result.year;
-                $.get(`http://localhost:8080/teams?year=${year}`, function(teams){
+                $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//teams?year=${year}`, function(teams){
                     let arrValidTeams = [];
                     
                     // Get all fbs teams and add them to arrValidTeams
@@ -1248,7 +1248,7 @@
 
                     promise1.then(() => {
                         // Get all the teams that the user has already picked
-                        $.get('http://localhost:8080/selections?groupID=' + groupID + '&userID=' + userID, function(alreadyPicked){
+                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//selections?groupID=' + groupID + '&userID=' + userID, function(alreadyPicked){
                             let arrAlreadyPicked = [];
 
                             // add all the teams that the user has already picked to arrAlreadyPicked
@@ -1297,7 +1297,7 @@
         // Displays the make picks card with needed information
         $(document).on('click', '#tblPicksGroups tbody tr', function(){
             groupID = $(this).attr('data-value');
-            $.get('http://localhost:8080/weekNumber', function(result){
+            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//weekNumber', function(result){
                 let intWeekNumber = result.weekNumber;
                 week = intWeekNumber;
 
@@ -1325,8 +1325,8 @@
                             <hr>`;
                 $('#divMakePicks .card-body').html(strHTML);
                 displayValidPicks();
-                $.get('http://localhost:8080/weekData', function(result){
-                    $.get('http://localhost:8080/picksLeft?userID=' + userID + '&groupID=' + groupID, function(picksLeft){
+                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//weekData', function(result){
+                    $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//picksLeft?userID=' + userID + '&groupID=' + groupID, function(picksLeft){
                         let numPicks = picksLeft.picksLeft[0].PicksLeft;
                         let gamesData = result
 
@@ -1366,7 +1366,7 @@
                             /*
                                 If user has made a pick in spot x, fill the game and team selectize boxes then disable the game and team selectize boxes, otherwise allow them to make a pick
                             */
-                            $.get('http://localhost:8080/selectionsByCurrentWeek?groupID=' + groupID + '&userID=' + userID, function(result){
+                            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//selectionsByCurrentWeek?groupID=' + groupID + '&userID=' + userID, function(result){
                                 let arrAlreadyPicked = result.selections;
                                 for (let i = 1; i <= numPicks; i++){
                                     
@@ -1374,7 +1374,7 @@
                                     let match = arrAlreadyPicked.find(pick => pick.PickNum == i);
                                     if(match) {
                                         gameID = match.GameID;
-                                        $.get('http://localhost:8080/gameData?gameID=' + gameID, function(result){
+                                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//gameData?gameID=' + gameID, function(result){
                                             let strGameID = result[0].id;
                                             // Fill selGames{i} with all games then select the one the user has already picked
                                             let strHTML = "<option></option>";
@@ -1523,7 +1523,7 @@
                         icon: 'error'
                     })
                 } else {
-                    $.get('http://localhost:8080/selections?groupID=' + groupID + '&userID=' + userID, function(result){
+                    $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//selections?groupID=' + groupID + '&userID=' + userID, function(result){
                         let arrAlreadyPicked = result.selections;
 
                         let blnPickedGame = false;
@@ -1565,7 +1565,7 @@
                                         pickedTeam: strTeam,
                                         pickNum: i
                                     }
-                                    $.post('http://localhost:8080/selection', formData, function(result){
+                                    $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//selection', formData, function(result){
                                         Swal.fire({
                                             title: 'Pick Made',
                                             text: 'Pick was successfully made!',
@@ -1592,7 +1592,7 @@
                                 pickedTeam: strTeam,
                                 pickNum: i
                             }
-                            $.post('http://localhost:8080/selection', formData, function(result){
+                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//selection', formData, function(result){
                                 Swal.fire({
                                     title: 'Pick Made',
                                     text: 'Pick was successfully made!',
@@ -1628,7 +1628,7 @@
 
                 // Delete the pick
                 $.ajax({
-                    url: 'http://localhost:8080/selections?groupID=' + groupID + '&userID=' + userID + '&gameID=' + strGameID,
+                    url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//selections?groupID=' + groupID + '&userID=' + userID + '&gameID=' + strGameID,
                     type: 'DELETE',
                     success: function(result){
                         // Enable the selectize boxes

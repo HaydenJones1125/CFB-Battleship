@@ -335,7 +335,6 @@
 
         // getUserID to assign to global variable
         function getUserID(callback) {
-            console.log(sessionStorage.getItem('SessionID'));
             $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net//userID?SessionID=' + sessionStorage.getItem('SessionID'), function(result){
                 if(result.message == "success") {
                     callback(result.userID)

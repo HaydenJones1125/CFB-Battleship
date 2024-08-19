@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const {v4: uuidv4, stringify} = require('uuid');
 const sql = require('mssql');
 const bcrypt = require('bcrypt');
@@ -12,6 +13,14 @@ console.log('Listening on port ' +  HTTP_PORT);
 var app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
+
+// Serve static files from the root directory
+app.use(express.static(__dirname));
+
+// Fallback to index.html if a route is not found (Single Page Application Support)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 const config = {
     user: process.env.DB_USER,

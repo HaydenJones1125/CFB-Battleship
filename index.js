@@ -13,8 +13,6 @@ var app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
-console.log(process.env.DB_SERVER);
-
 const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -880,7 +878,7 @@ const cron = require('node-cron');
 const fetch = require('node-fetch');
 
 let gameData = [];
-let year = 2023 //new Date().getFullYear();
+let year = new Date().getFullYear();
 let currentFootballWeekNumber;
 
 /*
@@ -1012,7 +1010,6 @@ function getFootballWeekNumber(games) {
 }
 
 async function getWeekData() {
-    console.log(currentFootballWeekNumber)
     const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&week=${currentFootballWeekNumber}&seasonType=regular&division=fbs`;
 
     try {

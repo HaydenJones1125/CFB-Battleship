@@ -301,6 +301,17 @@
                             location.reload();
                         });
                     });
+                },
+                error: function(){
+                    sessionStorage.removeItem('SessionID');
+                    userID = '';
+                    // Slide up the current card (if it's not already hidden)
+                    $('.card:visible').slideUp(function(){
+                        // Slide down the dashboard card
+                        $('#divAbout').slideDown(function(){
+                            location.reload();
+                        });
+                    });
                 }
             })
         }
@@ -340,7 +351,7 @@
         // getUserID to assign to global variable
         function getUserID(callback) {
             $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/userID?SessionID=' + sessionStorage.getItem('SessionID'), function(result){
-                if(result.message == "success") {
+                    if(result.message == "success") {
                     callback(result.userID)
                 } else {
                     Swal.fire({
@@ -898,20 +909,7 @@
                     },
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        let strSessionID = sessionStorage.getItem('SessionID')
-                        $.ajax({
-                            url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/sessions?SessionID=' + strSessionID,
-                            type: 'DELETE',
-                            success: function(){
-                                sessionStorage.removeItem('SessionID');
-                                userID = '';
-                                $('#divDashboard').slideUp(function () {
-                                    $('#divAbout').slideDown(function(){
-                                        location.reload();
-                                    });
-                                });
-                            }
-                        })
+                        logout();
                     }
                 })
             }

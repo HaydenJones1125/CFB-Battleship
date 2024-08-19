@@ -1048,6 +1048,13 @@
                         icon: 'warning'
                     });
                     return;
+                } else if (!sessionStorage.getItem('SessionID')) {
+                    Swal.fire({
+                        title: 'Not Logged In',
+                        text: 'You must be logged in to join a group!',
+                        icon: 'warning'
+                    });
+                    return;
                 } else {
                     // Get groupMembers to check if user is in group
                     $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=' + strGroupID, function(result){

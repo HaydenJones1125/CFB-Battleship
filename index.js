@@ -1183,12 +1183,12 @@ async function scheduleChecks() {
         const lastGameStart = await getLastGameOfWeekStart(gamesData, weekNumber);
 
         let scheduleRunTime;
-        if (!lastGameStart || new Date(lastGameStart) < new Date()) {
+        if (!lastGameStart || new Date(lastGameStart) < new Date()) {   // Set to run on the 15th of August if no games are found
             const nextYear = new Date().getFullYear() + 1;
             scheduleRunTime = new Date(nextYear, 7, 15, 0, 0, 0);
-        } else {
+        } else {                                                        // Run after the last game is estimated to finish
             scheduleRunTime = new Date(lastGameStart);
-            scheduleRunTime.setHours(scheduleRunTime.getHours() + 6);
+            scheduleRunTime.setHours(scheduleRunTime.getHours() + 8);
         }
 
         console.log(`Scheduled check for: ${scheduleRunTime}`);

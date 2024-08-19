@@ -328,7 +328,7 @@
 
         // Function to check if game has started
         function checkGameStart(gameTime) {
-            const currentTime = new Date("2024-09-28T23:30:00.000Z");
+            const currentTime = new Date();
             const gameStartTime = new Date(gameTime);
             if(currentTime < gameStartTime) {
                 return false;

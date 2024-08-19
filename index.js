@@ -4,7 +4,7 @@ const {v4: uuidv4, stringify} = require('uuid');
 const sql = require('mssql');
 const bcrypt = require('bcrypt');
 const schedule = require('node-schedule');
-const HTTP_PORT = 8000;
+const HTTP_PORT = 8080;
 const bodyParser = require('body-parser');
 require('dotenv').config();
 

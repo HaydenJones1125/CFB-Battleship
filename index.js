@@ -17,6 +17,11 @@ app.use(cors());
 // Serve static files from the root directory
 app.use(express.static(__dirname));
 
+// Fallback to index.html if a route is not found (Single Page Application Support)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,

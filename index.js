@@ -17,11 +17,6 @@ app.use(cors());
 // Serve static files from the root directory
 app.use(express.static(__dirname));
 
-// Fallback to index.html if a route is not found (Single Page Application Support)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
 const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -998,7 +993,7 @@ async function getAllGames() {
 }
 
 function getFootballWeekNumber(games) {
-    const currentDate = new Date("2023-09-28T23:30:00.000Z");
+    const currentDate = new Date();
     let weekNumber = 1;
 
     for (let game of games) {

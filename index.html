@@ -328,7 +328,7 @@
 
         // Function to check if game has started
         function checkGameStart(gameTime) {
-            const currentTime = new Date();
+            const currentTime = new Date("2024-09-28T23:30:00.000Z");
             const gameStartTime = new Date(gameTime);
             if(currentTime < gameStartTime) {
                 return false;
@@ -1636,38 +1636,49 @@
             // Extract the number from the id (assuming format btnMakePicksX)
             var i = buttonID.replace('btnChangePick', '');
 
-            // check if this selectize has been disabled        (Add Code to delete pick and re-enable selectize)
-            var selectizeGame = $(`#selGames${i}`)[0].selectize;
-            if (selectizeGame.isDisabled) {
-                // Get the gameID and team that the user has already picked
-                let strGameID = $(`#selGames${i}`).val();
-                let strTeam = $(`#selTeams${i}`).val();
-
-                // Delete the pick
-                $.ajax({
-                    url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selections?groupID=' + groupID + '&userID=' + userID + '&gameID=' + strGameID,
-                    type: 'DELETE',
-                    success: function(result){
-                        // Enable the selectize boxes
-                        selectizeGame.enable();
-                        var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
-                        selectizeTeam.enable();
-                        Swal.fire({
-                            title: 'Pick Deleted',
-                            text: 'Pick was successfully deleted! Please make a new pick.',
-                            icon: 'warning'
-                        });
-                        // Redisplay the valid picks
-                        $('#divMakePicks .scrollable ol').html('');
-                        displayValidPicks();
-                    }
-                })
-            } else {
+            // Check if this game has started
+            let strTimeStart = $(`#selGames${i}`).text().split(" {")[1].split("}")[0];
+            let gameTime = new Date(strTimeStart);
+            if (checkGameStart(gameTime)) {
                 Swal.fire({
-                    icon: 'error',
-                    title: "Can't Change Pick",
-                    text: "You can't change a pick that hasn't been made yet!"
-                })
+                    title: 'Game Already Started',
+                    text: 'This game has already started. You cannot change a pick after the game has started.',
+                    icon: 'error'
+                });
+            } else {
+                // check if this selectize has been disabled        (Add Code to delete pick and re-enable selectize)
+                var selectizeGame = $(`#selGames${i}`)[0].selectize;
+                if (selectizeGame.isDisabled) {
+                    // Get the gameID and team that the user has already picked
+                    let strGameID = $(`#selGames${i}`).val();
+                    let strTeam = $(`#selTeams${i}`).val();
+
+                    // Delete the pick
+                    $.ajax({
+                        url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selections?groupID=' + groupID + '&userID=' + userID + '&gameID=' + strGameID,
+                        type: 'DELETE',
+                        success: function(result){
+                            // Enable the selectize boxes
+                            selectizeGame.enable();
+                            var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
+                            selectizeTeam.enable();
+                            Swal.fire({
+                                title: 'Pick Deleted',
+                                text: 'Pick was successfully deleted! Please make a new pick.',
+                                icon: 'warning'
+                            });
+                            // Redisplay the valid picks
+                            $('#divMakePicks .scrollable ol').html('');
+                            displayValidPicks();
+                        }
+                    })
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: "Can't Change Pick",
+                        text: "You can't change a pick that hasn't been made yet!"
+                    })
+                }
             }
         });
                 

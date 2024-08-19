@@ -877,7 +877,6 @@ app.get('/year', (req, res, next) => {
 const cron = require('node-cron');
 const fetch = require('node-fetch');
 
-let gameData = [];
 let year = new Date().getFullYear();
 let currentFootballWeekNumber;
 

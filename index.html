@@ -1213,7 +1213,6 @@
 
             // Get numPicks for the selected user
             $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/allPicksLeft?userID=' + strUserID + '&groupID=' + strGroupID, function(result){
-                console.log(result.picksLeft)
                 displayPicksPerWeek(result.picksLeft);
             }); 
 
@@ -1440,7 +1439,6 @@
                                         })
                                     } else {
                                         strHTML = "<option></option>";
-                                        console.log(gamesData);
                                         gamesData.forEach((game) => {
                                             let date = new Date(game.start_date).toDateString();
                                             strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';

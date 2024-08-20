@@ -363,95 +363,127 @@
         }
 
         // Function to get all groups
-        function getGroups(callback) {
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groups', function(result){
-                callback(result);
+        function getGroups() {
+            return new Promise((resolve, reject) => {
+                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groups', function(groups) {
+                    if (groups) {
+                        resolve(groups);
+                    } else {
+                        reject("Failed to get groups");
+                    }
+                });
             });
         }
 
-        // Display the groups in a table
-        function displayGroupsTable() {
-            getGroups(function(groups){
-                var promise = new Promise((resolve, reject) => {
-                    
-                    groups.forEach((value, index, array) => {
-                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=' + value.GroupID, function(result){
-                            let arrMembers = result.members;
-                            let numMembers = arrMembers.length;
-                            let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + value.OwnerName + '</td><td>' + numMembers + '</td></tr>'
-                            $('#tblGroups tbody').append(strRow);
-                            if (index === array.length -1) resolve();
-                        })
-                    })
-                })
 
-                promise.then(() => {
-                    $('#tblGroups').DataTable({
-                        fixedHeader: true,
-                        responsive: true,
-                        columnDefs: [
-                            {
-                                targets: '_all',
-                                className: 'dt-head-center',
-                            },
-                            {
-                                targets: '_all',
-                                className: 'dt-body-center',
-                            }
-                        ]
-                    })
-                })
-            });    
+        // Display the groups in a table
+        async function displayGroupsTable() {
+            try {
+                const groups = await getGroups(); // Await the promise returned by getGroups
+
+                // Fetching members for each group and appending rows
+                for (const group of groups) {
+                    const result = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=${group.GroupID}`);
+                    const arrMembers = result.members;
+                    const numMembers = arrMembers.length;
+
+                    const strRow = `
+                        <tr data-value="${group.GroupID}">
+                            <td>${group.GroupName}</td>
+                            <td>${group.OwnerName}</td>
+                            <td>${numMembers}</td>
+                        </tr>`;
+                    $('#tblGroups tbody').append(strRow);
+                }
+
+                // Initialize DataTable after all rows are appended
+                $('#tblGroups').DataTable({
+                    fixedHeader: true,
+                    responsive: true,
+                    columnDefs: [
+                        {
+                            targets: '_all',
+                            className: 'dt-head-center',
+                        },
+                        {
+                            targets: '_all',
+                            className: 'dt-body-center',
+                        }
+                    ]
+                });
+
+            } catch (error) {
+                console.error("Error displaying groups table:", error);
+            }
         }
+
 
         // Get the groups that the user is a part of
-        function getYourGroups(callback) {
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupsByUserID?userID=' + userID, function(result){
-                callback(result);
-            })
+        function getYourGroups() {
+            return new Promise((resolve, reject) => {
+                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupsByUserID?userID=' + userID, function(result) {
+                    if (result) {
+                        resolve(result);
+                    } else {
+                        reject("Failed to get your groups");
+                    }
+                });
+            });
         }
+
 
         // Display the groups that the user is a part of
-        function displayYourGroups() {
-            getYourGroups(function(groups){
-                groups = groups.groups;
-                var promise = new Promise((resolve, reject) => {
-                    
-                    groups.forEach((value, index, array) => {
-                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupByID?groupID=' + value.GroupID, function(groupInfo){
-                            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=' + value.GroupID, function(result){
-                                let arrMembers = result.members;
-                                let numMembers = arrMembers.length;
-                                let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + groupInfo.OwnerName + '</td><td>' + numMembers + '</td></tr>'
-                                $('#tblYourGroups tbody').append(strRow);
-                                if (index === array.length -1) resolve();
-                            })
-                        })
-                    })
-                })
+        async function displayYourGroups() {
+            try {
+                const groupsResult = await getYourGroups();
+                const groups = groupsResult.groups;
 
-                promise.then(() => {
-                    $('#tblYourGroups').DataTable({
-                        fixedHeader: true,
-                        responsive: true,
-                        columnDefs: [
-                            {
-                                targets: '_all',
-                                className: 'dt-head-center',
-                            },
-                            {
-                                targets: '_all',
-                                className: 'dt-body-center',
-                            }
-                        ]
-                    })
-                })
-            })
+                // Loop through each group and fetch additional data
+                for (const group of groups) {
+                    const groupInfo = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupByID?groupID=${group.GroupID}`);
+                    const result = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=${group.GroupID}`);
+
+                    const arrMembers = result.members;
+                    const numMembers = arrMembers.length;
+
+                    const strRow = `
+                        <tr data-value="${group.GroupID}">
+                            <td>${group.GroupName}</td>
+                            <td>${groupInfo.OwnerName}</td>
+                            <td>${numMembers}</td>
+                        </tr>`;
+                    $('#tblYourGroups tbody').append(strRow);
+                }
+
+                // Initialize DataTable after all rows are appended
+                $('#tblYourGroups').DataTable({
+                    fixedHeader: true,
+                    responsive: true,
+                    columnDefs: [
+                        {
+                            targets: '_all',
+                            className: 'dt-head-center',
+                        },
+                        {
+                            targets: '_all',
+                            className: 'dt-body-center',
+                        }
+                    ]
+                });
+
+            } catch (error) {
+                console.error("Error displaying your groups:", error);
+            }
         }
 
-        function displayGroupMembersCard(groupID) {
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=' + groupID, function(result){
-                let members = result.members;
+
+        async function displayGroupMembersCard(groupID) {
+            try {
+                // Fetch group members
+                const groupMembersResponse = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=${groupID}`);
+                const members = groupMembersResponse.members;
+
+                // Create the initial HTML structure
                 let strHTML = `
                     <div class="d-flex card-header justify-content-center">
                         <h3>Group Members</h3>
@@ -469,52 +501,53 @@
 
                         </div>
                     </div>`;
-                $('#divGroupMembers').html(strHTML);    
-                
-                let promise = new Promise((resolve, reject) => {
-                    members.forEach((member, index, array) => {
-                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft?userID=' + member.UserID + '&groupID=' + groupID, function(result){
-                            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/lastLostWeek?userID=' + member.UserID + '&groupID=' + groupID, function(lastLostWeek){
-                                // Check if lastLostWeek is empty (no picks lost)
-                                if (lastLostWeek.lastLostWeek.length < 1) {
-                                    lastLostWeek.lastLostWeek = [{Week: '1'}];
-                                    let strRow = '<tr data-value=' + member.UserID +'><td>' + member.Username + '</td><td>' + result.picksLeft + '</td><td>' + lastLostWeek.lastLostWeek + '</td></tr>';
-                                    $('#tblGroupMembers tbody').append(strRow);
-                                } else {
-                                    let strRow = '<tr data-value=' + member.UserID +'><td>' + member.Username + '</td><td>' + result.picksLeft + '</td><td>' + lastLostWeek.lastLostWeek + '</td></tr>';
-                                    $('#tblGroupMembers tbody').append(strRow);
-                                }
-                                if (index === array.length -1) resolve();
-                            })
-                        })
-                    })
-                });
+                $('#divGroupMembers').html(strHTML);
 
-                promise.then(() => {
-                    $('#tblGroupMembers').DataTable({
-                        fixedHeader: true,
-                        responsive: true,
-                        columnDefs: [
-                            {
-                                targets: '_all',
-                                className: 'dt-head-center',
-                            },
-                            {
-                                targets: '_all',
-                                className: 'dt-body-center',
-                            }
-                        ],
-                        order: [[1, 'desc'],[2, 'desc']]
-                    });
-
-                    strHTML = `<button id="btnBackToGroups" class="btn btn-primary col-12 mt-3" type="button">Back To Groups</button>`;
-                    $('#divBtn').append(strHTML);
+                // Fetch picks left and last lost week for each member and build rows
+                for (const member of members) {
+                    const picksLeftResponse = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft?userID=${member.UserID}&groupID=${groupID}`);
+                    const lastLostWeekResponse = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/lastLostWeek?userID=${member.UserID}&groupID=${groupID}`);
                     
-                    $('#divGroups').slideUp(function(){
-                        $('#divGroupMembers').slideDown();
-                    })
+                    let lastLostWeek = lastLostWeekResponse.lastLostWeek.length < 1 ? '1' : lastLostWeekResponse.lastLostWeek;
+                    
+                    let strRow = `
+                        <tr data-value=${member.UserID}>
+                            <td>${member.Username}</td>
+                            <td>${picksLeftResponse.picksLeft}</td>
+                            <td>${lastLostWeek}</td>
+                        </tr>`;
+                    $('#tblGroupMembers tbody').append(strRow);
+                }
+
+                // Initialize DataTable
+                $('#tblGroupMembers').DataTable({
+                    fixedHeader: true,
+                    responsive: true,
+                    columnDefs: [
+                        {
+                            targets: '_all',
+                            className: 'dt-head-center',
+                        },
+                        {
+                            targets: '_all',
+                            className: 'dt-body-center',
+                        }
+                    ],
+                    order: [[1, 'desc'], [2, 'desc']]
                 });
-            })
+
+                // Add Back to Groups button
+                strHTML = `<button id="btnBackToGroups" class="btn btn-primary col-12 mt-3" type="button">Back To Groups</button>`;
+                $('#divBtn').append(strHTML);
+
+                // Slide animations
+                $('#divGroups').slideUp(function() {
+                    $('#divGroupMembers').slideDown();
+                });
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
         }
 
         // Add new row to groups datatable
@@ -548,38 +581,40 @@
             table.row.add(newRow).draw();
         }
 
-        function displayPicksGroups () {
-            getYourGroups(function(groups){
-                groups = groups.groups;
-                var promise = new Promise((resolve, reject) => {
-                    
-                    groups.forEach((value, index, array) => {
-                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupByID?groupID=' + value.GroupID, function(groupInfo){
-                            let strRow = '<tr data-value="' + value.GroupID + '"><td>' + value.GroupName + '</td><td>' + groupInfo.OwnerName + '</td></tr>'
-                            $('#tblPicksGroups tbody').append(strRow);
-                            if (index === array.length -1) resolve();
-                        })
-                    })
-                })
+        async function displayPicksGroups() {
+            try {
+                const groupsResponse = await getYourGroups();
+                const groups = groupsResponse.groups;
 
-                promise.then(() => {
-                    $('#tblPicksGroups').DataTable({
-                        fixedHeader: true,
-                        responsive: true,
-                        columnDefs: [
-                            {
-                                targets: '_all',
-                                className: 'dt-head-center',
-                            },
-                            {
-                                targets: '_all',
-                                className: 'dt-body-center',
-                            }
-                        ]
-                    })
-                })
-            
-            })
+                for (const group of groups) {
+                    const groupInfo = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupByID?groupID=${group.GroupID}`);
+                    const strRow = `
+                        <tr data-value="${group.GroupID}">
+                            <td>${group.GroupName}</td>
+                            <td>${groupInfo.OwnerName}</td>
+                        </tr>`;
+                    $('#tblPicksGroups tbody').append(strRow);
+                }
+
+                // Initialize DataTable after all rows are added
+                $('#tblPicksGroups').DataTable({
+                    fixedHeader: true,
+                    responsive: true,
+                    columnDefs: [
+                        {
+                            targets: '_all',
+                            className: 'dt-head-center',
+                        },
+                        {
+                            targets: '_all',
+                            className: 'dt-body-center',
+                        }
+                    ]
+                });
+
+            } catch (error) {
+                console.error('Error displaying picks groups:', error);
+            }
         }
 
         /* End Functions */
@@ -1154,9 +1189,21 @@
         })
 
         $('#tblYourGroups tbody').on('click', 'tr', function(){
+            // Display loading icon
+            Swal.fire({
+                title: 'Loading',
+                text: 'Loading Group Members Card',
+                icon: 'info',
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();  // Show the loading animation
+                }
+            });
             let strGroupID = $(this).attr('data-value');
             groupID = strGroupID;
-            displayGroupMembersCard(strGroupID);
+            displayGroupMembersCard(strGroupID).then(() => {
+                Swal.close(); // Close the loading animation
+            });
         });
 
         /*

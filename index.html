@@ -142,6 +142,7 @@
                         <div class="cardGroups">
                             <h5>Create a Group</h5>
                             <hr>
+                            <p>To Create a new group, press this button then give a group name and password (optional)</p>
                             <button class="btn btn-primary col-8" type="button" id="btnNewGroup">Create New Group</button>
                         </div>
                     </div>
@@ -160,7 +161,7 @@
                 </div>
                 <hr>
                 <div class="d-flex justify-content-center">
-                    <h5>All Groups</h5>
+                    <h5>Join a Group</h5>
                 </div>
                 <table id="tblGroups" class="table table-striped" style="width: 100%;">
                     <thead>
@@ -170,19 +171,19 @@
                         
                     </tbody>
                 </table>
-                <hr>
+                <hr style="border: none; border-top: 7px dashed black; opacity: 100%;">
                 <div class="row">
                     <div class="columnYourGroups">
                         <div class="cardGroups">
                             <h5>How to View Your Groups</h5>
                             <hr>
-                            <p>To view the groups you are a part of, simply click on the group's row.</p>
+                            <p>To view the leaderboards and the players of the groups you are a part of, simply click on the group's row below.</p>
                         </div>
                     </div>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-center">
-                    <h5>Your Groups</h5>
+                    <h5>View Groups Leaderbord and Players</h5>
                 </div>
                 <table id="tblYourGroups" class="table table-striped" style="width: 100%;">
                     <thead>
@@ -225,7 +226,7 @@
                     <p></p>
                     <li><h6>Strategic Planning:</h6> Players must strategize wisely, balancing their picks between strong favorites and potential upsets throughout the season. As the number of available picks dwindles, the game becomes more intense, requiring careful consideration of each selection.</li>
                     <p></p>
-                    <li><h6>Victory:</h6> The last player remaining with picks available at the end of the season is declared the winner of Battleship College Football, demonstrating their mastery of college football prediction and strategic foresight. In case of a tie, the players in the </li>
+                    <li><h6>Victory:</h6> The last player remaining with picks available at the end of the season is declared the winner of College Footbll Battleship. Games are selected through the conference championship games. THE FINAL WEEK OF PICKS IS CONFERENCE CHAMPIONSHIP WEEK</li>
                     <p></p>
                     <li><h6>Tiebreaker:</h6> If tied, the player who held the higher number of picks for the longest time wins. For example, if both players end with 4 picks, the one who dropped to 4 picks later in the season wins.</li>
                 </ol>
@@ -1395,7 +1396,7 @@
                 $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/weekData', function(result){
                     $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft?userID=' + userID + '&groupID=' + groupID, function(picksLeft){
                         let numPicks = picksLeft.picksLeft;
-                        let gamesData = result
+                        let gamesData = result.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
                         if (numPicks == 0) {
                             strHTML = `<p class="text-center">You no longer have picks in this group</p>`;
@@ -1445,13 +1446,20 @@
                                             let strGameID = result[0].id;
                                             // Fill selGames{i} with all games then select the one the user has already picked
                                             let strHTML = "<option></option>";
+                                            console.log(gamesData);
+
                                             gamesData.forEach((game) => {
-                                                let date = new Date(game.start_date).toDateString();
-                                                strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
-                                            })
+                                                let gameStartTime = new Date(game.start_date);
+                                                let currentTime = new Date();
+    
+                                                // Only add the game to the Selectize options if it hasn't started yet or if the game is the one the user has already picked
+                                                if (gameStartTime > currentTime || gameID == game.id) {
+                                                    let date = gameStartTime.toDateString();
+                                                    strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
+                                                }
+                                            });
                                             $(`#selGames${i}`).html(strHTML).selectize({
                                                 placeholder: 'Select a game',
-                                                sortField: 'text',
                                                 onChange: function(value) {
                                                     // Get the selectize instance
                                                     var selectizeInstance = $(`#selGames${i}`)[0].selectize;
@@ -1492,12 +1500,17 @@
                                     } else {
                                         strHTML = "<option></option>";
                                         gamesData.forEach((game) => {
-                                            let date = new Date(game.start_date).toDateString();
-                                            strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
-                                        })
+                                            let gameStartTime = new Date(game.start_date);
+                                            let currentTime = new Date();
+
+                                            // Only add the game to the Selectize options if it hasn't started yet
+                                            if (gameStartTime > currentTime) {
+                                                let date = gameStartTime.toDateString();
+                                                strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
+                                            }
+                                        });
                                         $(`#selGames${i}`).html(strHTML).selectize({
                                             placeholder: 'Select a game',
-                                            sortField: 'text',
                                             onChange: function(value) {
                                                 // Get the selectize instance
                                                 var selectizeInstance = $(`#selGames${i}`)[0].selectize;

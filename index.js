@@ -157,7 +157,7 @@ app.get('/userID', async (req, res, next) => {
                 userID: result.recordset[0].UserID
             });
         } else {
-            res.status(404).json({
+            res.status(201).json({
                 message: "Session not found"
             });
         }

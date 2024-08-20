@@ -151,10 +151,16 @@ app.get('/userID', async (req, res, next) => {
             .input('SessionID', sql.UniqueIdentifier, strSessionID) // Use parameterized queries
             .query('SELECT UserID FROM dbo.tblSessions WHERE SessionID = @SessionID');
     
-        res.status(201).json({
-            message: "success",
-            userID: result.recordset[0].UserID
-        });
+        if (result.recordset.length > 0) {
+            res.status(201).json({
+                message: "success",
+                userID: result.recordset[0].UserID
+            });
+        } else {
+            res.status(404).json({
+                message: "Session not found"
+            });
+        }
     } catch (err) {
         console.error(err);
         res.status(500).send('Server error');

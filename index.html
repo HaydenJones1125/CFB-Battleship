@@ -1352,7 +1352,7 @@
                                 // Once all the teams have been removed from arrValidTeams, display the teams in the card
                                 promise3.then(() => {
                                     arrValidTeams.forEach((team) => {
-                                        let strHTML = `<li id='${team}'>${team}</li>`;
+                                        let strHTML = `<li id="${team}">${team}</li>`;
                                         $('#divMakePicks .scrollable ol').append(strHTML);
                                     })
                                 })
@@ -1447,7 +1447,6 @@
                                             let strGameID = result[0].id;
                                             // Fill selGames{i} with all games then select the one the user has already picked
                                             let strHTML = "<option></option>";
-                                            console.log(gamesData);
 
                                             gamesData.forEach((game) => {
                                                 let gameStartTime = new Date(game.start_date);
@@ -1686,7 +1685,7 @@
 
                                 // Remove the team from the list of valid picks
                                 let team = strTeam.split(" {")[0];
-                                $(`#divMakePicks .scrollable ol [id='${team}']`).remove();
+                                $(`#divMakePicks .scrollable ol [id="${team}"]`).remove();
                             })
                         }
                     })

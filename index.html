@@ -50,7 +50,7 @@
             <div class="card-body">
                 <form>
                     <label for="txtLoginEmail" class="form-label">Email</label>
-                    <input id="txtLoginEmail" class="form-control" type="email">
+                    <input id="txtLoginEmail" class="form-control" type="email" style="text-transform: lowercase;">
                     <label for="txtLoginPassword" class="form-label mt-3">Password</label>
                     <input id="txtLoginPassword" class="form-control" type="password">
                     <div class="d-flex justify-content-evenly mt-3 button-container">
@@ -70,14 +70,14 @@
             <div class="card-body">
                 <form>
                     <label for="txtForgotPasswordEmail" class="form-label">Account Email</label>
-                    <input id="txtForgotPasswordEmail" class="form-control" type="email">
+                    <input id="txtForgotPasswordEmail" class="form-control" type="email" style="text-transform: lowercase;">
                     <label for="txtNewPassword" class="form-label mt-3">New Password</label>
                     <input id="txtNewPassword" class="form-control" type="password">
                     <label for="txtConfirmNewPassword" class="form-label mt-3">Confirm New Password</label>
                     <input id="txtConfirmNewPassword" class="form-control" type="password">
                     <div class="d-flex justify-content-evenly mt-3">
                         <button id="btnChangePassword" class="btn btn-primary col-5" type="button">Change Password</button>
-                        <button id="btnBackToLogin" class="btn btn-secondary col-5" type="button">Back To Login</button>
+                        <button id="btnChangePasswordToLogin" class="btn btn-secondary col-5" type="button">Back To Login</button>
                     </div>
                 </form>
             </div>
@@ -97,7 +97,7 @@
                     <label for="txtRegisterUsername" class="form-label mt-3">Username</label>
                     <input id="txtRegisterUsername" class="form-control" type="text">
                     <label for="txtRegisterEmail" class="form-label mt-3">Email</label>
-                    <input id="txtRegisterEmail" class="form-control" type="email">
+                    <input id="txtRegisterEmail" class="form-control" type="email" style="text-transform: lowercase;">
                     <label for="txtRegisterPassword" class="form-label mt-3">Password</label>
                     <input id="txtRegisterPassword" class="form-control" type="password">
                     <label for="txtConfirmPassword" class="form-label mt-3">Confirm Password</label>
@@ -894,6 +894,13 @@
         $('#btnForgotPassword').on('click', function(){
             $('#divLogin').slideToggle(function(){
                 $('#divForgotPassword').slideToggle();
+            })
+        })
+
+        // Change Password to Login
+        $('#btnChangePasswordToLogin').on('click', function(){
+            $('#divForgotPassword').slideToggle(function(){
+                $('#divLogin').slideToggle();
             })
         })
 

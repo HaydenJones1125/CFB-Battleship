@@ -141,6 +141,76 @@ app.get('/users', async (req, res, next) => {
     }
 });
 
+// Change password of user
+app.put('/users', async (req, res, next) => {
+    let email = req.body.email;
+    let newPassword = req.body.newPassword;
+    let strUserID = req.query.userID;
+
+    if (!email || !newPassword || !strUserID) {
+        res.status(400).json({ error: 'Missing required fields' });
+        return;
+    } else {
+        try {
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            const pool = await poolPromise;
+
+            // Execute the query
+            const request = pool.request();
+            request.input('UserID', sql.UniqueIdentifier, strUserID);
+            request.input('Email', sql.VarChar, email);
+            request.input('Password', sql.VarChar, hashedPassword);
+
+            const result = await request.query(
+                `UPDATE tblUsers
+                    SET Password = @Password
+                    WHERE UserID = @UserID AND Email = @Email`
+            );
+
+            res.status(200).json({
+                message: "success",
+                email: email
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: err.message });
+        }
+    }
+});
+
+// Check if user exists
+app.get('/userExists', async (req, res, next) => {
+    let strEmail = req.query.email;
+
+    if (strEmail) {
+        try {
+            const pool = await poolPromise;
+
+            const result = await pool.request()
+                .input('Email', sql.VarChar, strEmail)
+                .query('SELECT * FROM tblUsers WHERE Email = @Email');
+
+            if (result.recordset.length > 0) {
+                res.status(200).json({
+                    message: "success",
+                    userExists: true,
+                    userID: result.recordset[0].UserID
+                });
+            } else {
+                res.status(200).json({
+                    message: "success",
+                    userExists: false
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: err.message });
+        }
+    } else {
+        res.status(400).json({ error: "Email is required" });
+    }
+});
+
 // Gets userID from tblSessions using SessionID
 app.get('/userID', async (req, res, next) => {
     let strSessionID = req.query.SessionID;

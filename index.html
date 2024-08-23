@@ -53,9 +53,31 @@
                     <input id="txtLoginEmail" class="form-control" type="email">
                     <label for="txtLoginPassword" class="form-label mt-3">Password</label>
                     <input id="txtLoginPassword" class="form-control" type="password">
+                    <div class="d-flex justify-content-evenly mt-3 button-container">
+                        <button id="btnLogin" class="btn btn-primary responsive-button" type="button">Login</button>
+                        <button id="btnRegistration" class="btn btn-success responsive-button" type="button">Register</button>
+                        <button id="btnForgotPassword" class="btn btn-secondary responsive-button" type="button">Forgot Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Forgot Password Card -->
+         <div id="divForgotPassword" class="card col-12 text-black" style="display: none;">
+            <div class="d-flex card-header justify-content-center">
+                <h3>Forgot Password</h3>
+            </div>
+            <div class="card-body">
+                <form>
+                    <label for="txtForgotPasswordEmail" class="form-label">Account Email</label>
+                    <input id="txtForgotPasswordEmail" class="form-control" type="email">
+                    <label for="txtNewPassword" class="form-label mt-3">New Password</label>
+                    <input id="txtNewPassword" class="form-control" type="password">
+                    <label for="txtConfirmNewPassword" class="form-label mt-3">Confirm New Password</label>
+                    <input id="txtConfirmNewPassword" class="form-control" type="password">
                     <div class="d-flex justify-content-evenly mt-3">
-                        <button id="btnLogin" class="btn btn-primary col-5" type="button">Login</button>
-                        <button id="btnRegistration" class="btn btn-success col-5" type="button">Register</button>
+                        <button id="btnChangePassword" class="btn btn-primary col-5" type="button">Change Password</button>
+                        <button id="btnBackToLogin" class="btn btn-secondary col-5" type="button">Back To Login</button>
                     </div>
                 </form>
             </div>
@@ -695,6 +717,74 @@
                 })
             }
         })
+
+        // Change password
+        $('#btnChangePassword').on('click', function(){
+            let strEmail = $('#txtForgotPasswordEmail').val();
+            let strNewPassword = $('#txtNewPassword').val();
+            let strConfirmNewPassword = $('#txtConfirmNewPassword').val();
+
+            let blnError = false;
+            let strErrorMessage = '';
+            if (strEmail.length < 1){
+                blnError = true;
+                strErrorMessage = strErrorMessage + 'Email cannot be blank.  ';
+            }
+            if (strNewPassword.length < 1){
+                blnError = true;
+                strErrorMessage = strErrorMessage + 'New Password cannot be blank.  ';
+            }
+            if (strConfirmNewPassword.length < 1){
+                blnError = true;
+                strErrorMessage = strErrorMessage + 'Confirm New Password cannot be blank.  ';
+            }
+            if (strNewPassword != strConfirmNewPassword){
+                blnError = true;
+                strErrorMessage = strErrorMessage + 'Passwords do not match.  ';
+            }
+            if (blnError == true){
+                Swal.fire({
+                    title: "Oops",
+                    text: strErrorMessage,
+                    icon: "error"
+                });
+            } else {
+                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/userExists?email=' + strEmail, function(result){
+                    console.log(result);
+                    if (result.userExists){
+                        let strUserID = result.userID;
+                        $.ajax({
+                            url: `https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/users?userID=${result.userID}`,
+                            type: 'PUT',
+                            data: {newPassword: strNewPassword, email: strEmail},
+                            success: function(result){
+                                Swal.fire({
+                                    title: "Success",
+                                    text: "Password Changed",
+                                    icon: "success"
+                                })
+                                $('#divForgotPassword').slideToggle(function(){
+                                    $('#divLogin').slideToggle();
+                                })
+                            },
+                            error: function(){
+                                Swal.fire({
+                                    title: "Oops",
+                                    text: "Password Change Failed",
+                                    icon: "error"
+                                })
+                            }
+                        })
+                    } else {
+                        Swal.fire({
+                            title:"Incorrect Email",
+                            text: "Incorrect Email was Provided",
+                            icon: "error"
+                        })
+                    }
+                })
+            }
+        })
         
         // Register User
         $('#btnRegister').on('click', function(){
@@ -797,6 +887,13 @@
         $('#btnRegistration').on('click', function(){
             $('#divLogin').slideToggle(function(){
                 $('#divRegister').slideToggle();
+            })
+        })
+
+        // Login to Change Password
+        $('#btnForgotPassword').on('click', function(){
+            $('#divLogin').slideToggle(function(){
+                $('#divForgotPassword').slideToggle();
             })
         })
 

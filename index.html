@@ -1178,7 +1178,10 @@
             let strGroupID = $(this).attr('data-value');
             // Get first game to check if season has started
             $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/firstGame', function(game){
+                // Add 6 days to the first game to allow people to join late
                 let gameStartTime = game.start_date;
+                gameStartTime = new Date(gameStartTime);
+                gameStartTime.setDate(gameStartTime.getDate() + 6);
                 let gameStart = checkGameStart(gameStartTime);
                 if (gameStart) {
                     Swal.fire({

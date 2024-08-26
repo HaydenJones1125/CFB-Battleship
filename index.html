@@ -1560,7 +1560,7 @@
                                                 let currentTime = new Date();
     
                                                 // Only add the game to the Selectize options if it hasn't started yet or if the game is the one the user has already picked
-                                                if (gameStartTime > currentTime || gameID == game.id) {
+                                                if (gameStartTime > currentTime || strGameID == game.id) {
                                                     let date = gameStartTime.toDateString();
                                                     strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
                                                 }

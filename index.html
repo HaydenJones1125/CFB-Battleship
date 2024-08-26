@@ -535,19 +535,34 @@
                     </div>`;
                 $('#divGroupMembers').html(strHTML);
 
-                // Fetch picks left and last lost week for each member and build rows
+                // Fetch picks left and last lost week for the whole group
+                const picksLeftResponse = await $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupPicksLeft?groupID=' + groupID);
+                const lastLostWeekResponse = await $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/lastLostWeek?groupID=' + groupID);
+
+                // Create dictionaries for easy lookup by UserID
+                const picksLeftMap = {};
+                const lastLostWeekMap = {};
+
+                picksLeftResponse.picksLeft.forEach(item => {
+                    picksLeftMap[item.UserID] = item.PicksLeft;
+                });
+
+                lastLostWeekResponse.lastLostWeekData.forEach(item => {
+                    lastLostWeekMap[item.UserID] = item.LastLostWeek;
+                });
+
+                // Loop through members and use the pre-fetched data
                 for (const member of members) {
-                    const picksLeftResponse = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft?userID=${member.UserID}&groupID=${groupID}`);
-                    const lastLostWeekResponse = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/lastLostWeek?userID=${member.UserID}&groupID=${groupID}`);
-                    
-                    let lastLostWeek = lastLostWeekResponse.lastLostWeek.length < 1 ? '1' : lastLostWeekResponse.lastLostWeek;
+                    const picksLeft = picksLeftMap[member.UserID] || 0;
+                    const lastLostWeek = lastLostWeekMap[member.UserID] || '1';
                     
                     let strRow = `
                         <tr data-value=${member.UserID}>
                             <td>${member.Username}</td>
-                            <td>${picksLeftResponse.picksLeft}</td>
+                            <td>${picksLeft}</td>
                             <td>${lastLostWeek}</td>
                         </tr>`;
+                    
                     $('#tblGroupMembers tbody').append(strRow);
                 }
 

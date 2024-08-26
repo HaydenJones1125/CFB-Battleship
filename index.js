@@ -870,58 +870,32 @@ app.get('/picksLeft', async (req, res, next) => {
     }
 });
 
-// Get the week the last time the user lost a pick
-app.get('/lastLostWeek', async (req, res, next) => {
+// Get latest picksLeft by groupID for all users in the group
+app.get('/groupPicksLeft', async (req, res, next) => {
     let strGroupID = req.query.groupID;
-    let strUserID = req.query.userID;
 
-    if (strGroupID && strUserID) {
+    if (strGroupID) {
         try {
             const pool = await poolPromise;
 
-            // First, get the number of rows for the specified GroupID and UserID
-            const countResult = await pool.request()
+            // Execute the query to select PicksLeft for the most recent week for all users in the group
+            const result = await pool.request()
                 .input('GroupID', sql.UniqueIdentifier, strGroupID)
-                .input('UserID', sql.UniqueIdentifier, strUserID)
                 .query(`
-                    SELECT COUNT(*) AS TotalRows
-                    FROM tblPicksLeft 
-                    WHERE GroupID = @GroupID AND UserID = @UserID
+                    SELECT UserID, PicksLeft
+                    FROM tblPicksLeft
+                    WHERE GroupID = @GroupID
+                    AND Week = (
+                        SELECT MAX(Week)
+                        FROM tblPicksLeft
+                        WHERE GroupID = @GroupID
+                    )
                 `);
-
-            const totalRows = countResult.recordset[0].TotalRows;
-
-            let lastLostWeek;
-
-            if (totalRows === 1) {
-                // If there's only one row, set lastLostWeek to 1
-                lastLostWeek = 1;
-            } else {
-                // Execute the query to select the last week where the picks left decreased
-                const result = await pool.request()
-                    .input('GroupID', sql.UniqueIdentifier, strGroupID)
-                    .input('UserID', sql.UniqueIdentifier, strUserID)
-                    .query(`
-                        SELECT TOP 1 Week 
-                        FROM tblPicksLeft AS t1 
-                        WHERE GroupID = @GroupID AND UserID = @UserID 
-                        AND PicksLeft < (
-                            SELECT PicksLeft 
-                            FROM tblPicksLeft AS t2 
-                            WHERE t2.GroupID = t1.GroupID 
-                            AND t2.UserID = t1.UserID 
-                            AND t2.Week = t1.Week - 1
-                        ) 
-                        ORDER BY Week DESC
-                    `);
-
-                lastLostWeek = result.recordset[0]?.Week || 1;
-            }
-
-            res.status(200).json({
-                message: "success",
-                lastLostWeek: lastLostWeek
-            });
+            
+                res.status(200).json({
+                    message: "success",
+                    picksLeft: result.recordset
+                })
         } catch (err) {
             console.error(err);
             res.status(400).json({ error: err.message });
@@ -930,6 +904,55 @@ app.get('/lastLostWeek', async (req, res, next) => {
         res.status(400).json({ error: "Not all parameters provided" });
     }
 });
+
+// Get the week the last time the user lost a pick
+// Get the last week where picks left decreased for all users in the group
+app.get('/lastLostWeek', async (req, res, next) => {
+    let strGroupID = req.query.groupID;
+
+    if (strGroupID) {
+        try {
+            const pool = await poolPromise;
+
+            // Execute the query to select the last week where the picks left decreased for each user in the group
+            const result = await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .query(`
+                    WITH RankedPicks AS (
+                        SELECT UserID, Week, PicksLeft,
+                            ROW_NUMBER() OVER (PARTITION BY UserID ORDER BY Week DESC) AS RowNum
+                        FROM tblPicksLeft
+                        WHERE GroupID = @GroupID
+                    )
+                    SELECT UserID, ISNULL((
+                        SELECT TOP 1 Week 
+                        FROM RankedPicks AS t1
+                        WHERE t1.UserID = rp.UserID 
+                        AND t1.PicksLeft < (
+                            SELECT t2.PicksLeft 
+                            FROM RankedPicks AS t2 
+                            WHERE t2.UserID = t1.UserID 
+                            AND t2.RowNum = t1.RowNum + 1
+                        )
+                    ), 1) AS LastLostWeek
+                    FROM RankedPicks rp
+                    WHERE RowNum = 1
+                    GROUP BY UserID, PicksLeft
+                `);
+
+            res.status(200).json({
+                message: "success",
+                lastLostWeekData: result.recordset
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
+    } else {
+        res.status(400).json({ error: "GroupID not provided" });
+    }
+});
+
 
 // Get first game of the year
 app.get('/firstGame', async (req, res, next) => {

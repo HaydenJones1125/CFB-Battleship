@@ -1104,7 +1104,6 @@ function getFootballWeekNumber(games) {
         // If the current date is before the next game's date or there is no next game,
         // and after or equal to the current game's date, return the current week
         if (currentDate <= gameDate && (nextGameDate === null || currentDate < nextGameDate)) {
-            console.log('here');
             return games[i].week;
         }
     }

@@ -1360,10 +1360,18 @@
         }
 
         function addPicksToCard(week, picks) {
+            console.log(picks);
             picks.forEach((pick) => {
                 if (pick.Week == week) {
-                    let strHTML = `<li>${pick.PickedTeam}</li>`;
-                    $(`#week${week}`).append(strHTML);
+                    if (pick.selection_correct == 1) {
+                        console.log(pick.PickedTeam);
+                        let strHTML = `<li style="color: green;">${pick.PickedTeam}</li>`;
+                        $(`#week${week}`).append(strHTML);
+                    } else if (pick.selection_correct == 0) {
+                        console.log(pick.PickedTeam);
+                        let strHTML = `<li style="color: red;">${pick.PickedTeam}</li>`;
+                        $(`#week${week}`).append(strHTML);
+                    }
                 }
             })
         }

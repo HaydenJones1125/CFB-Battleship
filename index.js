@@ -1093,23 +1093,31 @@ async function getAllGames() {
 
 function getFootballWeekNumber(games) {
     const currentDate = new Date();
-    let weekNumber = 1;
 
-    for (let game of games) {
-        const gameDate = new Date(game.start_date);
-        if (gameDate <= currentDate && game.week <= 15) {
-            weekNumber = game.week;
+    // Sort games by start_date to ensure they are in chronological order
+    games.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+    for (let i = 0; i < games.length; i++) {
+        const gameDate = new Date(games[i].start_date);
+        const nextGameDate = i + 1 < games.length ? new Date(games[i + 1].start_date) : null;
+
+        // If the current date is before the next game's date or there is no next game,
+        // and after or equal to the current game's date, return the current week
+        if (currentDate <= gameDate && (nextGameDate === null || currentDate < nextGameDate)) {
+            console.log('here');
+            return games[i].week;
         }
     }
 
-    const lastGame = games[games.length - 1];
-    const lastGameDate = new Date(lastGame.start_date);
-    if (currentDate > lastGameDate && lastGame.week === 16) {
-        weekNumber = 16;
+    // If the current date is after the last game's date, return the last game's week
+    if (currentDate > new Date(games[games.length - 1].start_date)) {
+        return games[games.length - 1].week;
     }
-    
-    return weekNumber;
+
+    // Default return in case no other conditions are met (shouldn't happen)
+    return 1;
 }
+
 
 async function getWeekData() {
     const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&week=${currentFootballWeekNumber}&seasonType=regular&division=fbs`;
@@ -1310,7 +1318,7 @@ async function getLastGameOfWeekStart(gameData, weekNumber) {
 
 scheduleChecks();
 
-/*      To manually run the game checks
+/*      // To manually run the game checks
 async function runGameChecks() {
     try {
         // Get all games for the current season
@@ -1319,6 +1327,7 @@ async function runGameChecks() {
         // Determine the current football week number
         const weekNumber = getFootballWeekNumber(gamesData);
         currentFootballWeekNumber = weekNumber;
+        console.log(currentFootballWeekNumber);
 
         // Check winners for the previous week
         await checkWinners(weekNumber - 1);

@@ -1315,7 +1315,7 @@ async function getLastGameOfWeekStart(gameData, weekNumber) {
     return gamesForWeek.length > 0 ? gamesForWeek[0].start_date : null;
 }
 
-//scheduleChecks();
+scheduleChecks();
 
 /*      // To manually run the game checks
 async function runGameChecks() {

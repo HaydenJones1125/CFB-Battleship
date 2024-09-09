@@ -774,7 +774,6 @@
                 });
             } else {
                 $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/userExists?email=' + strEmail, function(result){
-                    console.log(result);
                     if (result.userExists){
                         let strUserID = result.userID;
                         $.ajax({
@@ -1360,15 +1359,12 @@
         }
 
         function addPicksToCard(week, picks) {
-            console.log(picks);
             picks.forEach((pick) => {
                 if (pick.Week == week) {
                     if (pick.selection_correct == 1) {
-                        console.log(pick.PickedTeam);
                         let strHTML = `<li style="color: green;">${pick.PickedTeam}</li>`;
                         $(`#week${week}`).append(strHTML);
                     } else if (pick.selection_correct == 0) {
-                        console.log(pick.PickedTeam);
                         let strHTML = `<li style="color: red;">${pick.PickedTeam}</li>`;
                         $(`#week${week}`).append(strHTML);
                     }
@@ -1377,6 +1373,11 @@
         }
 
         function displayPicksPerWeek(numPicks){
+            // Sort the picks by week
+            numPicks.sort((a, b) => {
+                return a.Week - b.Week;
+            })
+            console.log(numPicks);
             let strHTML = `<ol class="week"></ol>`;
             $('#divMemberPicks .card-body .divider').before(strHTML);
             numPicks.forEach((pick) => {

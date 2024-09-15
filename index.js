@@ -1280,6 +1280,7 @@ async function getTeams(year) {
     }
 }
 
+// Not working fully right now - need to fix (think it's timing out)
 async function scheduleChecks() {
     try {
         const gamesData = await getAllGames();
@@ -1299,8 +1300,8 @@ async function scheduleChecks() {
 
         console.log(`Scheduled check for: ${scheduleRunTime}`);
         schedule.scheduleJob(scheduleRunTime, async () => {
-            await checkWinners(weekNumber - 1);
-            await addPicksLeft(weekNumber - 1);
+            //await checkWinners(weekNumber - 1);
+            //await addPicksLeft(weekNumber - 1);
             scheduleChecks();
         });
     } catch (err) {

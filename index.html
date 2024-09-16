@@ -1505,6 +1505,15 @@
         
         // Displays the make picks card with needed information
         $(document).on('click', '#tblPicksGroups tbody tr', function(){
+            Swal.fire({
+                title: 'Loading',
+                text: 'Loading Group Members Card',
+                icon: 'info',
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();  // Show the loading animation
+                }
+            });
             groupID = $(this).attr('data-value');
             $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/weekNumber', function(result){
                 let intWeekNumber = result.weekNumber;
@@ -1687,6 +1696,7 @@
                                 $('#divMakePicks .card-body .row').append(strHTML);
                                 $('#divDashboard').slideUp(function(){
                                     $('#divMakePicks').slideDown();
+                                    swal.close();
                                 })
                             })
                         }

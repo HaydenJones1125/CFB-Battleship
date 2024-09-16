@@ -1714,6 +1714,15 @@
        
         // Submit one pick at a time, make sure the chosen team hasn't been picked already
         $(document).on('click', '.btn-make-pick', function(){
+            Swal.fire({
+                title: 'Loading',
+                text: 'Loading Group Members Card',
+                icon: 'info',
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();  // Show the loading animation
+                }
+            });
             let buttonID = $(this).attr('id');
             // Extract the number from the id (assuming format btnMakePicksX)
             var i = buttonID.replace('btnMakePick', '');
@@ -1836,6 +1845,7 @@
                                 // Remove the team from the list of valid picks
                                 let team = strTeam.split(" {")[0];
                                 $(`#divMakePicks .scrollable ol [id="${team}"]`).remove();
+                                swal.close();
                             })
                         }
                     })

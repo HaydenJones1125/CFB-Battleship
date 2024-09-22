@@ -1295,7 +1295,7 @@ async function scheduleChecks() {
             scheduleRunTime = new Date(nextYear, 7, 15, 0, 0, 0);
         } else {                                                        // Run after the last game is estimated to finish
             scheduleRunTime = new Date(lastGameStart);
-            scheduleRunTime.setHours(scheduleRunTime.getHours() + 8);
+            scheduleRunTime.setHours(scheduleRunTime.getHours() + 5);
         }
 
         console.log(`Scheduled check for: ${scheduleRunTime}`);
@@ -1334,6 +1334,7 @@ async function runGameChecks() {
 
         // Add picks left for the previous week
         await addPicksLeft(weekNumber - 1);
+        console.log('Game checks completed successfully');
 
     } catch (error) {
         console.error('Error running game checks:', error);

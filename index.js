@@ -1341,7 +1341,7 @@ async function runGameChecks() {
     }
 }
 
-runGameChecks();
+//runGameChecks();
 
 
 app.listen(HTTP_PORT);

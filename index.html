@@ -1202,7 +1202,7 @@
             // Get first game to check if season has started
             $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/firstGame', function(game){
                 // Add 6 days to the first game to allow people to join late
-                let gameStartTime = game.start_date;
+                let gameStartTime = game.startDate;
                 gameStartTime = new Date(gameStartTime);
                 gameStartTime.setDate(gameStartTime.getDate() + 6);
                 let gameStart = checkGameStart(gameStartTime);
@@ -1507,7 +1507,7 @@
         $(document).on('click', '#tblPicksGroups tbody tr', function(){
             Swal.fire({
                 title: 'Loading',
-                text: 'Loading Group Members Card',
+                text: 'Loading Picks Card',
                 icon: 'info',
                 showConfirmButton: false,
                 didOpen: () => {
@@ -1546,7 +1546,7 @@
                 $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/weekData', function(result){
                     $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft?userID=' + userID + '&groupID=' + groupID, function(picksLeft){
                         let numPicks = picksLeft.picksLeft;
-                        let gamesData = result.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+                        let gamesData = result.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
                         if (numPicks == 0) {
                             strHTML = `<p class="text-center">You no longer have picks in this group</p>`;
@@ -1598,15 +1598,16 @@
                                             let strHTML = "<option></option>";
 
                                             gamesData.forEach((game) => {
-                                                let gameStartTime = new Date(game.start_date);
+                                                let gameStartTime = new Date(game.startDate);
                                                 let currentTime = new Date();
     
                                                 // Only add the game to the Selectize options if it hasn't started yet or if the game is the one the user has already picked
                                                 if (gameStartTime > currentTime || strGameID == game.id) {
                                                     let date = gameStartTime.toDateString();
-                                                    strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
+                                                    strHTML += '<option value="' + game.id + '">' + game.awayTeam + ' at ' + game.homeTeam + ' {' + date + ' ' + convertTo12HourFormat(game.startDate) + '}</option>';
                                                 }
                                             });
+                                            console.log(strHTML);
                                             $(`#selGames${i}`).html(strHTML).selectize({
                                                 placeholder: 'Select a game',
                                                 onChange: function(value) {
@@ -1618,8 +1619,8 @@
 
                                                     // Split the text into away and home teams
                                                     var teams = selectedOptionText.split(" at ");
-                                                    var awayTeam = teams[0] + ` {${gamesData.find(game => game.id == value).away_conference}}`;
-                                                    var homeTeam = teams[1].split(" {")[0] + ` {${gamesData.find(game => game.id == value).home_conference}}`;
+                                                    var awayTeam = teams[0] + ` {${gamesData.find(game => game.id == value).awayConference}}`;
+                                                    var homeTeam = teams[1].split(" {")[0] + ` {${gamesData.find(game => game.id == value).homeConference}}`;
 
                                                     // Use the teams as needed, e.g., populating another selectize box
                                                     var $teamSelect = $(`#selTeams${i}`).selectize();
@@ -1648,14 +1649,15 @@
                                         })
                                     } else {
                                         strHTML = "<option></option>";
+                                        console.log(gamesData);
                                         gamesData.forEach((game) => {
-                                            let gameStartTime = new Date(game.start_date);
+                                            let gameStartTime = new Date(game.startDate);
                                             let currentTime = new Date();
 
                                             // Only add the game to the Selectize options if it hasn't started yet
                                             if (gameStartTime > currentTime) {
                                                 let date = gameStartTime.toDateString();
-                                                strHTML += '<option value="' + game.id + '">' + game.away_team + ' at ' + game.home_team + ' {' + date + ' ' + convertTo12HourFormat(game.start_date) + '}</option>';
+                                                strHTML += '<option value="' + game.id + '">' + game.awayTeam + ' at ' + game.homeTeam + ' {' + date + ' ' + convertTo12HourFormat(game.startDate) + '}</option>';
                                             }
                                         });
                                         $(`#selGames${i}`).html(strHTML).selectize({
@@ -1669,8 +1671,8 @@
 
                                                 // Split the text into away and home teams
                                                 var teams = selectedOptionText.split(" at ");
-                                                var awayTeam = teams[0] + ` {${gamesData.find(game => game.id == value).away_conference}}`;
-                                                var homeTeam = teams[1].split(" {")[0] + ` {${gamesData.find(game => game.id == value).home_conference}}`;
+                                                var awayTeam = teams[0] + ` {${gamesData.find(game => game.id == value).awayConference}}`;
+                                                var homeTeam = teams[1].split(" {")[0] + ` {${gamesData.find(game => game.id == value).homeConference}}`;
 
                                                 // Use the teams as needed, e.g., populating another selectize box
                                                 var $teamSelect = $(`#selTeams${i}`).selectize();

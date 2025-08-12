@@ -742,7 +742,7 @@ app.get('/weekNumber', (req, res, next) => {
     })
 });
 
-// get game start_dtae by gameID
+// get game startDate by gameID
 app.get('/gameStartDate', (req, res, next) => {
     let strGameID = req.query.gameID;
 
@@ -1094,12 +1094,12 @@ async function getAllGames() {
 function getFootballWeekNumber(games) {
     const currentDate = new Date();
 
-    // Sort games by start_date to ensure they are in chronological order
-    games.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    // Sort games by startDate to ensure they are in chronological order
+    games.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
     for (let i = 0; i < games.length; i++) {
-        const gameDate = new Date(games[i].start_date);
-        const nextGameDate = i + 1 < games.length ? new Date(games[i + 1].start_date) : null;
+        const gameDate = new Date(games[i].startDate);
+        const nextGameDate = i + 1 < games.length ? new Date(games[i + 1].startDate) : null;
 
         // If the current date is before the next game's date or there is no next game,
         // and after or equal to the current game's date, return the current week
@@ -1109,7 +1109,7 @@ function getFootballWeekNumber(games) {
     }
 
     // If the current date is after the last game's date, return the last game's week
-    if (currentDate > new Date(games[games.length - 1].start_date)) {
+    if (currentDate > new Date(games[games.length - 1].startDate)) {
         return games[games.length - 1].week;
     }
 
@@ -1207,9 +1207,9 @@ async function checkWinners(weekNumber) {
 
 async function checkCorrectPick(row, data) {
     const pickedTeam = row.PickedTeam.split(" {")[0];
-    const correctPick = pickedTeam === data.home_team
-        ? data.home_points > data.away_points
-        : data.away_points > data.home_points;
+    const correctPick = pickedTeam === data.homeTeam
+        ? data.homePoints > data.awayPoints
+        : data.awayPoints > data.homePoints;
 
     await updateSelection(row, correctPick ? 1 : 0);
 }
@@ -1311,17 +1311,18 @@ async function scheduleChecks() {
 
 async function getLastGameOfWeekStart(gameData, weekNumber) {
     const gamesForWeek = gameData.filter(game => game.week === weekNumber)
-                                  .sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+                                  .sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
 
-    return gamesForWeek.length > 0 ? gamesForWeek[0].start_date : null;
+    return gamesForWeek.length > 0 ? gamesForWeek[0].startDate : null;
 }
 
-scheduleChecks();
+//scheduleChecks();
 
-/*      // To manually run the game checks
+      // To manually run the game checks
 async function runGameChecks() {
     try {
         // Get all games for the current season
+        console.log('Checking games');
         const gamesData = await getAllGames();
 
         // Determine the current football week number
@@ -1335,13 +1336,12 @@ async function runGameChecks() {
         // Add picks left for the previous week
         await addPicksLeft(weekNumber - 1);
         console.log('Game checks completed successfully');
-
     } catch (error) {
         console.error('Error running game checks:', error);
     }
 }
 
 runGameChecks();
-*/
+
 
 app.listen(HTTP_PORT);

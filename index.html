@@ -1377,7 +1377,6 @@
             numPicks.sort((a, b) => {
                 return a.Week - b.Week;
             })
-            console.log(numPicks);
             let strHTML = `<ol class="week"></ol>`;
             $('#divMemberPicks .card-body .divider').before(strHTML);
             numPicks.forEach((pick) => {
@@ -1607,7 +1606,6 @@
                                                     strHTML += '<option value="' + game.id + '">' + game.awayTeam + ' at ' + game.homeTeam + ' {' + date + ' ' + convertTo12HourFormat(game.startDate) + '}</option>';
                                                 }
                                             });
-                                            console.log(strHTML);
                                             $(`#selGames${i}`).html(strHTML).selectize({
                                                 placeholder: 'Select a game',
                                                 onChange: function(value) {
@@ -1649,7 +1647,6 @@
                                         })
                                     } else {
                                         strHTML = "<option></option>";
-                                        console.log(gamesData);
                                         gamesData.forEach((game) => {
                                             let gameStartTime = new Date(game.startDate);
                                             let currentTime = new Date();

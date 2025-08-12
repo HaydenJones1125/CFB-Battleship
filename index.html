@@ -1377,6 +1377,7 @@
             numPicks.sort((a, b) => {
                 return a.Week - b.Week;
             })
+            console.log(numPicks);
             let strHTML = `<ol class="week"></ol>`;
             $('#divMemberPicks .card-body .divider').before(strHTML);
             numPicks.forEach((pick) => {

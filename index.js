@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt');
 const schedule = require('node-schedule');
 const HTTP_PORT = 8080;
 const bodyParser = require('body-parser');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 console.log('Listening on port ' +  HTTP_PORT);
@@ -138,6 +139,113 @@ app.get('/users', async (req, res, next) => {
         }
     } else {
         res.status(400).json({ error: 'Missing email or password' });
+    }
+});
+
+// Forgot password, send email with reset link
+app.post('/forgotPassword', async (req, res, next) => {
+    const email = req.body.email;
+
+    if (!email) {
+        res.status(400).json({ error: 'Email is required' });
+        return;
+    }
+
+    try {
+        const pool = await poolPromise;
+
+        // Step 1. Find user by email
+        const userResult = await pool.request()
+            .input('email', sql.VarChar, email)
+            .query('SELECT UserID FROM tblUsers WHERE Email = @Email');
+        
+        if (userResult.recordset.length === 0) {
+            return res.json({ message: "If that email is registered, a reset link has been sent."})
+        }
+
+        const userID = userResult.recordset[0].UserID;
+
+        // Step 2. Generate token + expiration (eg. 1 hour from now)
+        const token = uuidv4();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+        // Step 3. Store token in database
+        await pool.request()
+            .input('Token', sql.UniqueIdentifier, token)
+            .input('UserID', sql.UniqueIdentifier, userID)
+            .input('ExpiresAt', sql.DateTime, expiresAt)
+            .query(`INSERT INTO tblPasswordResetTokens (Token, UserID, ExpiresAt)
+                     VALUES (@Token, @UserID, @ExpiresAt)`);
+
+        // Step 4. Send email with reset link
+        const resetLink = `https://collegefootballbattleship.com/reset-password.html?token=${token}`;
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        await transporter.sendMail({
+            to: email,
+            subject: 'Password Reset - College Football Battleship',
+            html: `
+                <p>Hello,</p>
+                <p>You requested a password reset. Click below to reset your password:</p>
+                <p><a href="${resetLink}">${resetLink}</a></p>
+                <p>This link will expire in 1 hour.</p>
+                <p>If you didn't request this, you can safely ignore it.</p>
+            `
+        })
+
+        res.json({ message: "If that email is registered, a reset link has been sent." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.post('/resetPassword', async (req, res, next) => {
+    const {token, newPassword} = req.body;
+
+    if (!token || !newPassword) {
+        return res.status(400).json({ error: 'Token and new password are required' });
+    }
+
+    try {
+        const pool = await poolPromise;
+
+        // Step 1. Validate token
+        const tokenResult = await pool.request()
+            .input('Token', sql.UniqueIdentifier, token)
+            .query('SELECT UserID, ExpiresAt FROM tblPasswordResetTokens WHERE Token = @Token AND ExpiresAt > GETDATE()');
+        
+        if (tokenResult.recordset.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        const userID = tokenResult.recordset[0].UserID;
+
+        // Step 2. Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Step 3. Update user's password
+        await pool.request()
+            .input('passwordHash', sql.VarChar, hashedPassword)
+            .input('UserID', sql.VarChar, userID)
+            .query('UPDATE tblUsers SET Password = @passwordHash WHERE UserID = @UserID');
+        
+        // Step 4. Invalidate token
+        await pool.request()
+            .input("Token", sql.UniqueIdentifier, token)
+            .query('DELETE FROM tblPasswordResetTokens WHERE Token = @Token');
+        
+        res.json({ message: 'Password has been reset successfully' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Server error' });
     }
 });
 

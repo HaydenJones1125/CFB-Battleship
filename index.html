@@ -71,12 +71,8 @@
                 <form>
                     <label for="txtForgotPasswordEmail" class="form-label">Account Email</label>
                     <input id="txtForgotPasswordEmail" class="form-control" type="email" style="text-transform: lowercase;">
-                    <label for="txtNewPassword" class="form-label mt-3">New Password</label>
-                    <input id="txtNewPassword" class="form-control" type="password">
-                    <label for="txtConfirmNewPassword" class="form-label mt-3">Confirm New Password</label>
-                    <input id="txtConfirmNewPassword" class="form-control" type="password">
                     <div class="d-flex justify-content-evenly mt-3">
-                        <button id="btnChangePassword" class="btn btn-primary col-5" type="button">Change Password</button>
+                        <button id="btnChangePassword" class="btn btn-primary col-5" type="button">Send Reset Password Email</button>
                         <button id="btnChangePasswordToLogin" class="btn btn-secondary col-5" type="button">Back To Login</button>
                     </div>
                 </form>
@@ -743,71 +739,41 @@
         })
 
         // Change password
-        $('#btnChangePassword').on('click', function(){
-            let strEmail = $('#txtForgotPasswordEmail').val();
-            let strNewPassword = $('#txtNewPassword').val();
-            let strConfirmNewPassword = $('#txtConfirmNewPassword').val();
+        $('#btnChangePassword').on('click', function () {
+            const strEmail = $('#txtForgotPasswordEmail').val().trim().toLowerCase();
+            console.log(strEmail);
 
-            let blnError = false;
-            let strErrorMessage = '';
-            if (strEmail.length < 1){
-                blnError = true;
-                strErrorMessage = strErrorMessage + 'Email cannot be blank.  ';
-            }
-            if (strNewPassword.length < 1){
-                blnError = true;
-                strErrorMessage = strErrorMessage + 'New Password cannot be blank.  ';
-            }
-            if (strConfirmNewPassword.length < 1){
-                blnError = true;
-                strErrorMessage = strErrorMessage + 'Confirm New Password cannot be blank.  ';
-            }
-            if (strNewPassword != strConfirmNewPassword){
-                blnError = true;
-                strErrorMessage = strErrorMessage + 'Passwords do not match.  ';
-            }
-            if (blnError == true){
+            if (strEmail.length < 1) {
                 Swal.fire({
                     title: "Oops",
-                    text: strErrorMessage,
+                    text: "Email cannot be blank.",
                     icon: "error"
                 });
-            } else {
-                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/userExists?email=' + strEmail, function(result){
-                    if (result.userExists){
-                        let strUserID = result.userID;
-                        $.ajax({
-                            url: `https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/users?userID=${result.userID}`,
-                            type: 'PUT',
-                            data: {newPassword: strNewPassword, email: strEmail},
-                            success: function(result){
-                                Swal.fire({
-                                    title: "Success",
-                                    text: "Password Changed",
-                                    icon: "success"
-                                })
-                                $('#divForgotPassword').slideToggle(function(){
-                                    $('#divLogin').slideToggle();
-                                })
-                            },
-                            error: function(){
-                                Swal.fire({
-                                    title: "Oops",
-                                    text: "Password Change Failed",
-                                    icon: "error"
-                                })
-                            }
-                        })
-                    } else {
-                        Swal.fire({
-                            title:"Incorrect Email",
-                            text: "Incorrect Email was Provided",
-                            icon: "error"
-                        })
-                    }
-                })
+                return;
             }
-        })
+
+            // Send email to backend to trigger password reset link
+            $.ajax({
+                //url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/forgotPassword',
+                url: 'http://localhost:8080/forgotPassword',
+                type: 'POST',
+                data: { email: strEmail },
+                success: function (result) {
+                    Swal.fire({
+                        title: "Email Sent",
+                        text: result.message || "If the email is registered, a reset link has been sent.",
+                        icon: "success"
+                    });
+                },
+                error: function (xhr) {
+                    Swal.fire({
+                        title: "Oops",
+                        text: "An error occurred. Please try again.",
+                        icon: "error"
+                    });
+                }
+            });
+        });
         
         // Register User
         $('#btnRegister').on('click', function(){

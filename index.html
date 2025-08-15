@@ -754,8 +754,8 @@
 
             // Send email to backend to trigger password reset link
             $.ajax({
-                //url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/forgotPassword',
-                url: 'http://localhost:8080/forgotPassword',
+                url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/forgotPassword',
+                //url: 'http://localhost:8080/forgotPassword',
                 type: 'POST',
                 data: { email: strEmail },
                 success: function (result) {

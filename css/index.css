@@ -5,13 +5,23 @@
 }
 
 body {
-    background-image: url("../images/football-field-wallpaper.jpg");
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
+    min-height: 100vh;
+    position: relative;
     color: white;
 }
+
+body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("../images/football-field-wallpaper.jpg");
+    background-size: cover;
+    background-position: center;
+    z-index: -1;
+}
+
 
 .scrollable-div {
     height: 300px; /* Set the height as needed */

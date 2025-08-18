@@ -1125,6 +1125,9 @@ async function deleteDatabaseEntries() {
         // Delete from tblGroups
         await pool.request().query("DELETE FROM tblGroups");
 
+        // Delete from tblSessions
+        await pool.request().query("DELETE FROM tblSessions");
+
         console.log("All database entries deleted successfully.");
     } catch (err) {
         console.error("Error deleting database entries:", err);

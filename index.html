@@ -776,92 +776,91 @@
         });
         
         // Register User
-        $('#btnRegister').on('click', function(){
-            let strFirstName = $('#txtRegisterFirstName').val();
-            let strLastName = $('#txtRegisterLastName').val();
-            let strUsername = $('#txtRegisterUsername').val();
-            let strEmail = $('#txtRegisterEmail').val();
-            let strPassword = $('#txtRegisterPassword').val();
-            let strConfirmPassword = $('#txtConfirmPassword').val();
+        $('#btnRegister').on('click', async function () {
+  const strFirstName = $('#txtRegisterFirstName').val() || '';
+  const strLastName = $('#txtRegisterLastName').val() || '';
+  const strUsername = $('#txtRegisterUsername').val() || '';
+  const strEmail = $('#txtRegisterEmail').val() || '';
+  const strPassword = $('#txtRegisterPassword').val() || '';
+  const strConfirmPassword = $('#txtConfirmPassword').val() || '';
 
-            let strError = '';
+  let strError = '';
 
-            if(strPassword === strConfirmPassword) {
-                // Input Validation
-                let blnError = false;
-                if (strFirstName < 1) {
-                    blnError = true;
-                    strError += 'First name cannot be blank.  ';
-                }
-                if (strLastName < 1) {
-                    blnError = true;
-                    strError += 'Last name cannot be blank.  ';
-                }
-                if (strUsername < 1) {
-                    blnError = true;
-                    strError += 'Last name cannot be blank.  ';
-                }
-                if (!regEmail.test(strEmail)) {
-                    blnError = true;
-                    strError += 'Invalid Email Format.  ';
-                }
-                if (strPassword < 1) {
-                    blnError = true;
-                    strError += 'Password cannot be blank.  ';
-                }
+  // Password match check
+  if (strPassword !== strConfirmPassword) {
+    return Swal.fire({
+      title: "Passwords Do Not Match",
+      text: "Passwords do not match, please try again",
+      icon: "error"
+    });
+  }
 
-                if (blnError) {
-                    Swal.fire({ icon: 'error', title: 'Uh oh!', text: strError });
-                } else {
-                    // Create an object to hold the form data
-                    let formData = {
-                        firstName: strFirstName,
-                        lastName: strLastName,
-                        username: strUsername,
-                        email: strEmail,
-                        password: strPassword
-                    };
-                
-                    // call post to users to create a new user
-                    $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/users', formData, function(result){
-                        if (result.Error){
-                            Swal.fire({
-                                title: "Oops!",
-                                icon: "error",
-                                text: result.Error
-                            })
-                        } else {
-                            userID = result.userID;
-                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/sessions', {email: strEmail, password: strPassword}, function(result){
-                                if(result.Error){
-                                    Swal.fire({
-                                        title: "Oops",
-                                        html: '<p>' + result.Error  + '</p>',
-                                        icon: "error"
-                                    });
-                                } else {
-                                    sessionStorage.setItem('SessionID', result.sessionid)
-                                    Swal.fire({
-                                        title: "Success",
-                                        text: "User and Session Created",
-                                        icon: "success"
-                                    })
-                                    $('#divRegister').slideToggle(function(){
-                                        $('#divDashboard').slideToggle();
-                                    })
-                                }
-                            })
-                        }
-                    })
-                }
-            } else {
-                Swal.fire({
-                    title: "Passwords Do Not Match",
-                    text: "Passwords do not match, please try again",
-                    icon: "error"
-                })
-            }
-        })
+  // Input validation (use length checks, not numeric)
+  let blnError = false;
+  if (strFirstName.trim().length < 1) { blnError = true; strError += 'First name cannot be blank.  '; }
+  if (strLastName.trim().length < 1)  { blnError = true; strError += 'Last name cannot be blank.  '; }
+  if (strUsername.trim().length < 1)  { blnError = true; strError += 'Username cannot be blank.  '; } // fixed message
+  if (!regEmail.test(strEmail))       { blnError = true; strError += 'Invalid Email Format.  '; }
+  if (strPassword.trim().length < 1)  { blnError = true; strError += 'Password cannot be blank.  '; }
+
+  if (blnError) {
+    return Swal.fire({ icon: 'error', title: 'Uh oh!', text: strError });
+  }
+
+  // Helper to send x-www-form-urlencoded
+  const toForm = (obj) => new URLSearchParams(obj).toString();
+
+  try {
+    // 1) Register user (urlencoded)
+    const resUsers = await fetch('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: toForm({
+        firstName: strFirstName,
+        lastName: strLastName,
+        username: strUsername,
+        email: strEmail,
+        password: strPassword
+      })
+    });
+
+    const dataUsers = await resUsers.json().catch(() => ({}));
+
+    if (!resUsers.ok) {
+      // Handle duplicate email (409) and other errors
+      const msg = dataUsers.error || dataUsers.message || 'Could not create user.';
+      if (resUsers.status === 409) {
+        return Swal.fire({ title: 'Email already registered', text: msg, icon: 'error' });
+      }
+      return Swal.fire({ title: 'Error', text: msg, icon: 'error' });
+    }
+
+    const userID = dataUsers.userID; // if you need it later
+
+    // 2) Create session (login)
+    const resSess = await fetch('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: toForm({ email: strEmail, password: strPassword })
+    });
+
+    const dataSess = await resSess.json().catch(() => ({}));
+
+    if (!resSess.ok || dataSess.Error) {
+      const msg = dataSess.Error || dataSess.error || 'Could not create session.';
+      return Swal.fire({ title: "Login Error", text: msg, icon: "error" });
+    }
+
+    // Success
+    sessionStorage.setItem('SessionID', dataSess.sessionid);
+    await Swal.fire({ title: "Success", text: "User and Session Created", icon: "success" });
+    $('#divRegister').slideToggle(function () { $('#divDashboard').slideToggle(); });
+
+  } catch (err) {
+    console.error(err);
+    Swal.fire({ title: "Network Error", text: err.message || 'Something went wrong.', icon: "error" });
+  }
+});
 
         //logout the user
         $('#btnNavLogout').on('click', function(){

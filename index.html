@@ -830,7 +830,7 @@
       // Handle duplicate email (409) and other errors
       const msg = dataUsers.error || dataUsers.message || 'Could not create user.';
       if (resUsers.status === 409) {
-        return Swal.fire({ title: 'Email already registered', text: msg, icon: 'error' });
+        return Swal.fire({ title: 'Error', text: 'Email already registered', icon: 'error' });
       }
       return Swal.fire({ title: 'Error', text: msg, icon: 'error' });
     }

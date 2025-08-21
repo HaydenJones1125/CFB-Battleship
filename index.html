@@ -1169,7 +1169,7 @@
                 // Add 6 days to the first game to allow people to join late
                 let gameStartTime = game.startDate;
                 gameStartTime = new Date(gameStartTime);
-                gameStartTime.setDate(gameStartTime.getDate() + 6);
+                //gameStartTime.setDate(gameStartTime.getDate() + 6);       Remove this line to not allow late joiners
                 let gameStart = checkGameStart(gameStartTime);
                 if (gameStart) {
                     Swal.fire({

@@ -1185,7 +1185,7 @@ async function dbRun(query, params = []) {
 }
 
 async function getAllGames() {
-    const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&seasonType=regular&division=fbs`;
+    const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&seasonType=regular&classification=fbs`;
 
     try {
         const response = await fetch(apiEndpoint, {
@@ -1230,7 +1230,7 @@ function getFootballWeekNumber(games) {
 
 
 async function getWeekData() {
-    const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&week=${currentFootballWeekNumber}&seasonType=regular&division=fbs`;
+    const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&week=${currentFootballWeekNumber}&seasonType=regular&classification=fbs`;
 
     try {
         const response = await fetch(apiEndpoint, {

@@ -1169,6 +1169,8 @@
                 // Add 6 days to the first game to allow people to join late
                 let gameStartTime = game.startDate;
                 gameStartTime = new Date(gameStartTime);
+                // Change cut off time to midnight on game day (add 12 hours to get to 1pm)
+                gameStartTime.setHours(gameStartTime.getHours() + 12);
                 //gameStartTime.setDate(gameStartTime.getDate() + 6);       Remove this line to not allow late joiners
                 let gameStart = checkGameStart(gameStartTime);
                 if (gameStart) {

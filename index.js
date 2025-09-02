@@ -1089,7 +1089,7 @@ const cron = require('node-cron');
 const fetch = require('node-fetch');
 
 let year = new Date().getFullYear();
-let currentFootballWeekNumber = 1;
+let currentFootballWeekNumber = 2;
 
 /*
     Functionality to change the year on July 1st and delete database entries for tblPicksLeft, tblSelections, tblGroupMembers, and then tblGroups
@@ -1247,18 +1247,6 @@ async function getWeekData() {
     }
 }
 
-async function addPicksLeft(weekNumber) {
-    try {
-        const groups = await dbGetAll("SELECT * FROM tblGroups");
-
-        for (let group of groups) {
-            await getMembers(weekNumber, group.GroupID);
-        }
-    } catch (err) {
-        console.error('Error in addPicksLeft:', err);
-    }
-}
-
 async function getMembers(weekNumber, groupID) {
     try {
         const members = await dbGetAll("SELECT * FROM tblGroupMembers WHERE GroupID = @param1", [groupID]);
@@ -1299,20 +1287,6 @@ async function addRowToPicksLeft(weekNumber, groupID, userID, picksLeft) {
         );
     } catch (err) {
         console.error('Error in addRowToPicksLeft:', err);
-    }
-}
-
-async function checkWinners(weekNumber) {
-    try {
-        const selections = await dbGetAll("SELECT * FROM tblSelections WHERE Week = @param1", [weekNumber]);
-        const gamesData = await getLastWeekData();
-
-        for (let row of selections) {
-            const gameData = gamesData.find(game => game.id == row.GameID);
-            await checkCorrectPick(row, gameData);
-        }
-    } catch (err) {
-        console.error('Error in checkWinners:', err);
     }
 }
 
@@ -1391,68 +1365,404 @@ async function getTeams(year) {
     }
 }
 
-// Not working fully right now - need to fix (think it's timing out)
-async function scheduleChecks() {
+// Get games for a specific week
+async function getGamesForWeek(week) {
+    const apiEndpoint = `https://api.collegefootballdata.com/games?year=${year}&seasonType=regular&week=${week}`;
+    const resp = await fetch(apiEndpoint, {
+        method: 'GET',
+        headers: { accept: 'application/json', Authorization: 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8' }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} for week=${week}`);
+    return resp.json();
+}
+
+// Plan ONE user (no writes)
+async function planUserChecks(userID, groupID, targetWeek) {
+    let lastWeek = targetWeek ? Number(targetWeek) : undefined;
+    if (!lastWeek) {
+        const all = await getAllGames();
+        const wk = getFootballWeekNumber(all);
+        lastWeek = Math.max(1, wk - 1);
+    }
+
+    const weekGames = await getGamesForWeek(lastWeek);
+    const selections = await dbGetAll(
+        "SELECT * FROM tblSelections WHERE Week=@param1 AND UserID=@param2 AND GroupID=@param3",
+        [lastWeek, userID, groupID]
+    );
+
+    const updates = selections.map(row => {
+    const game = weekGames.find(g => g.id == row.GameID);
+    if (!game) return { row, correctPick: null, reason: 'game not found' };
+        const pickedTeam = String(row.PickedTeam).split(" {")[0];
+        const correctPick = pickedTeam === game.homeTeam
+            ? (game.homePoints > game.awayPoints)
+            : (game.awayPoints > game.homePoints);
+        return { row, correctPick: correctPick ? 1 : 0 };
+    });
+
+    const latest = await dbGet(
+        "SELECT TOP 1 PicksLeft, Week FROM tblPicksLeft WHERE GroupID=@param1 AND UserID=@param2 ORDER BY Week DESC",
+        [groupID, userID]
+    );
+
+    const incorrect = updates.filter(u => u.correctPick === 0).length;
+    const baseline = latest ? latest.PicksLeft : 7;
+    const nextWeekPicksLeft = Math.max(0, baseline - incorrect);
+
+    return { userID, groupID, lastWeek, baseline, incorrect, nextWeekPicksLeft, updates, selectionCount: selections.length };
+}
+
+// Plan ALL users (no writes)
+async function planAllUsersChecks(targetWeek) {
+    let lastWeek = targetWeek ? Number(targetWeek) : undefined;
+    if (!lastWeek) {
+        const all = await getAllGames();
+        const wk = getFootballWeekNumber(all);
+        lastWeek = Math.max(1, wk - 1);
+    }
+
+    const weekGames = await getGamesForWeek(lastWeek);
+    const allSelections = await dbGetAll("SELECT * FROM tblSelections WHERE Week=@param1", [lastWeek]);
+
+    const byUser = new Map();
+    for (const row of allSelections) {
+        const key = `${row.UserID}|${row.GroupID}`;
+        if (!byUser.has(key)) byUser.set(key, { userID: row.UserID, groupID: row.GroupID, rows: [] });
+        byUser.get(key).rows.push(row);
+    }
+
+    const plans = [];
+    for (const { userID, groupID, rows } of byUser.values()) {
+        const updates = rows.map(r => {
+            const game = weekGames.find(g => g.id == r.GameID);
+            if (!game) return { row: r, correctPick: null, reason: 'game not found' };
+            const pickedTeam = String(r.PickedTeam).split(" {")[0];
+            const correctPick = pickedTeam === game.homeTeam
+                ? (game.homePoints > game.awayPoints)
+                : (game.awayPoints > game.homePoints);
+            return { row: r, correctPick: correctPick ? 1 : 0 };
+        });
+
+        const latest = await dbGet(
+            "SELECT TOP 1 PicksLeft FROM tblPicksLeft WHERE GroupID=@param1 AND UserID=@param2 ORDER BY Week DESC",
+            [groupID, userID]
+        );
+        const incorrect = updates.filter(u => u.correctPick === 0).length;
+        const baseline = latest ? latest.PicksLeft : 7;
+        const nextWeekPicksLeft = Math.max(0, baseline - incorrect);
+
+        plans.push({ userID, groupID, lastWeek, baseline, incorrect, nextWeekPicksLeft, updates });
+    }
+
+    return { lastWeek, totalUsers: plans.length, plans };
+}
+
+// Undo the first bulk apply for a given week:
+// - Reset selection_correct to NULL for Week = week
+// - Delete tblPicksLeft rows for Week = week + 1 for affected users
+async function undoAllPicksRun(targetWeek) {
+  // Derive the week if not provided (same logic as your planners)
+  let week = targetWeek ? Number(targetWeek) : undefined;
+  if (!week) {
+    const all = await getAllGames();
+    const wk = getFootballWeekNumber(all);
+    week = Math.max(1, wk - 1);
+  }
+
+  // Build the same plan you would have applied, so we know which users/groups were touched
+  const bundle = await planAllUsersChecks(week);
+
+  const pool = await poolPromise;
+  const tx = new sql.Transaction(pool);
+  await tx.begin();
+  try {
+    await new sql.Request(tx).batch('SET XACT_ABORT ON;');
+
+    // 1) Reset all selection_correct to NULL for that week
+    await new sql.Request(tx)
+      .input('wk', sql.Int, week)
+      .query(`
+        UPDATE tblSelections
+        SET selection_correct = NULL
+        WHERE Week = @wk
+      `);
+
+    // 2) Delete next week's PicksLeft only for users we planned to touch
+    //    (more precise than deleting for the whole table)
+    for (const p of bundle.plans) {
+      await new sql.Request(tx)
+        .input('uid', sql.UniqueIdentifier, p.userID)
+        .input('gid', sql.UniqueIdentifier, p.groupID)
+        .input('wk',  sql.Int, week + 1)
+        .query(`
+          DELETE FROM tblPicksLeft
+          WHERE UserID = @uid AND GroupID = @gid AND Week = @wk
+        `);
+    }
+
+    await tx.commit();
+    console.log(`🔁 Undo complete: week ${week} selections reset; week ${week + 1} PicksLeft deleted for ${bundle.plans.length} users.`);
+  } catch (e) {
+    await tx.rollback();
+    console.error('Undo failed, rolled back:', e.message || e);
+    throw e;
+  }
+}
+
+async function commitAllUsersChecks(planBundle) {
+    const { lastWeek, plans } = planBundle;
+    const pool = await poolPromise;
+    const tx = new sql.Transaction(pool);
+    await tx.begin();
     try {
-        const gamesData = await getAllGames();
-        const weekNumber = getFootballWeekNumber(gamesData);
+        await new sql.Request(tx).batch("SET XACT_ABORT ON;");
 
-        currentFootballWeekNumber = weekNumber;
-        const lastGameStart = await getLastGameOfWeekStart(gamesData, weekNumber);
-
-        let scheduleRunTime;
-        if (!lastGameStart || new Date(lastGameStart) < new Date()) {   // Set to run on the 15th of August if no games are found
-            const nextYear = new Date().getFullYear() + 1;
-            scheduleRunTime = new Date(nextYear, 7, 15, 0, 0, 0);
-        } else {                                                        // Run after the last game is estimated to finish
-            scheduleRunTime = new Date(lastGameStart);
-            scheduleRunTime.setHours(scheduleRunTime.getHours() + 5);
+        // 1) selection_correct updates
+        for (const p of plans) {
+            for (const u of p.updates) {
+                if (u.correctPick == null) continue;
+                await new sql.Request(tx)
+                    .input('sel', sql.Int, u.correctPick)
+                    .input('uid', sql.UniqueIdentifier, u.row.UserID)
+                    .input('gid', sql.UniqueIdentifier, u.row.GroupID)
+                    .input('game', sql.Int, u.row.GameID)
+                    .input('wk', sql.Int, u.row.Week)
+                    .query(`
+                    UPDATE tblSelections
+                    SET selection_correct = @sel
+                    WHERE UserID=@uid AND GroupID=@gid AND GameID=@game AND Week=@wk
+                    `);
+            }
         }
 
-        console.log(`Scheduled check for: ${scheduleRunTime}`);
-        schedule.scheduleJob(scheduleRunTime, async () => {
-            //await checkWinners(weekNumber - 1);
-            //await addPicksLeft(weekNumber - 1);
-            scheduleChecks();
+        // 2) next week's PicksLeft inserts (idempotent)
+        for (const p of plans) {
+            await new sql.Request(tx)
+                .input('uid', sql.UniqueIdentifier, p.userID)
+                .input('gid', sql.UniqueIdentifier, p.groupID)
+                .input('picks', sql.Int, p.nextWeekPicksLeft)
+                .input('wk', sql.Int, lastWeek + 1)
+                .query(`
+                    IF NOT EXISTS (
+                    SELECT 1 FROM tblPicksLeft WHERE UserID=@uid AND GroupID=@gid AND Week=@wk
+                    )
+                    INSERT INTO tblPicksLeft (UserID, GroupID, PicksLeft, Week)
+                    VALUES (@uid, @gid, @picks, @wk);
+                `);
+        }
+
+        await tx.commit();
+        console.log(`✅ Committed ${plans.length} users for week ${lastWeek}`);
+    } catch (e) {
+        await tx.rollback();
+        console.error('❌ Rolled back bulk commit:', e.message || e);
+        throw e;
+    }
+}
+
+// Dry-run entry point: prints what would happen, does NOT write.
+async function runGameChecksForSpecificUser(userID, groupID, { week, dryRun = true } = {}) {
+    const plan = await planUserChecks(userID, groupID, week);
+
+    console.log(`\nDRY-RUN — user=${userID}, group=${groupID}, lastWeek=${plan.lastWeek}`);
+    if (plan.selectionCount === 0) {
+        console.log('No selections found for that user/group/week.');
+    }
+    console.table(
+    plan.updates.map(u => ({
+        GameID: u.row.GameID,
+        PickedTeam: u.row.PickedTeam,
+        WouldSet_selection_correct: u.correctPick,
+        Note: u.correctPick == null ? (u.reason || '') : ''
+    }))
+    );
+    console.log(
+        `Baseline PicksLeft: ${plan.baseline} | Incorrect this week: ${plan.incorrect} | ` +
+        `Next week's PicksLeft (computed): ${plan.nextWeekPicksLeft}\n`
+    );
+}
+
+
+
+// --- CLI SETUP ---
+function startCli() {
+    if (!process.stdin.isTTY) return; // Don't start CLI if not in a TTY
+
+    const readline = require('readline');
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: 'cfb-picks> '
+    });
+
+    // Tiny Helpers: Scoped to the CLI
+    function printAllUsersPlanSummary(bundle, sampleCount = 3) {
+        console.log(`\nPlan - week=${bundle.lastWeek}, users=${bundle.totalUsers}`);
+        const drops = bundle.plans.filter(p => p.incorrect > 0).length;
+        console.log(`Users with ≥1 incorrect: ${drops}/${bundle.totalUsers}`);
+
+        const sample = bundle.plans.slice(0, sampleCount);
+        if (sample.length) {
+            console.log('\nSample:');
+            sample.forEach((p, i) => {
+                console.log(
+                    ` ${i+1}. user=${p.userID} group=${p.groupID} ` +
+                    `baseline=${p.baseline} incorrect=${p.incorrect} next=${p.nextWeekPicksLeft}`
+                );
+            });
+        }
+        console.log('');
+    }
+
+    async function confirmPrompt(message) {
+        return await new Promise(res => {
+            const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
+            rl2.question(`${message} (y/N) `, a => { rl2.close(); res(/^y(es)?$/i.test(a)); });
         });
-    } catch (err) {
-        console.error('Error scheduling checks:', err);
     }
+
+    // --- Commands ---
+    const commands = {
+        // DRY-RUN for one user - NEVER WRITES
+        async checkUserPicks(userID, groupID, weekMaybe) {
+            if (!userID || !groupID) {
+                console.log('Usage: checkUserPicks <userID> <groupID> [week]');
+                return;
+            }
+            const week = /^\d+$/.test(weekMaybe) ? Number(weekMaybe) : undefined;
+            const plan = await planUserChecks(userID, groupID, week);
+
+            console.log(`\nDRY-RUN — user=${userID}, group=${groupID}, lastWeek=${plan.lastWeek}`);
+            if (plan.selectionCount === 0) {
+                console.log('No selections found for that user/group/week.');
+                return;
+            }
+            console.table(
+                plan.updates.map(u => ({
+                    GameID: u.row.GameID,
+                    PickedTeam: u.row.PickedTeam,
+                    WouldSet_selection_correct: u.correctPick,
+                    Note: u.correctPick == null ? (u.reason || '') : ''
+                }))
+            );
+            console.log(
+                `Baseline PicksLeft: ${plan.baseline} | Incorrect this week: ${plan.incorrect} | ` +
+                `Next week's PicksLeft (computed): ${plan.nextWeekPicksLeft}\n`
+            );
+        },
+
+        // DRY_RUN for all users - PREVIEW ONLY
+        async checkAllPicks(weekMaybe) {
+            const week = /^\d+$/.test(weekMaybe) ? Number(weekMaybe) : undefined;
+            const bundle = await planAllUsersChecks(week);
+            printAllUsersPlanSummary(bundle, 58);
+            console.log('DRY-RUN only. Use: applyAllPicks [week] to commit.\n');
+        },
+
+        // Show Plan -> Confirm -> Write for all users (transaction)
+        async applyAllPicks(weekMaybe) {
+            const week = /^\d+$/.test(weekMaybe) ? Number(weekMaybe) : undefined;
+
+            // 1) Build Plan (dry-run)
+            const bundle = await planAllUsersChecks(week);
+
+            // 2) Show Plan Summary (and one detailed user)
+            printAllUsersPlanSummary(bundle, 5);
+            if (bundle.plans[0]) {
+                const p = bundle.plans[0];
+                console.log('First user detailed view:');
+                console.table(
+                    p.updates.map(u => ({
+                        GameID: u.row.GameID,
+                        PickedTeam: u.row.PickedTeam,
+                        WouldSet_selection_correct: u.correctPick,
+                        Note: u.correctPick == null ? (u.reason || '') : ''
+                    }))
+                );
+            }
+
+            // 3) Confirm
+            const ok = await confirmPrompt('Commit these changes to the database?');
+            if (!ok) {
+                console.log('Aborted by user.');
+                return;
+            }
+
+            // 4) Commit exactly what was planned
+            await commitAllUsersChecks(bundle);
+        },
+
+        async undoAllPicks(weekMaybe) {
+            const week = /^\d+$/.test(weekMaybe) ? Number(weekMaybe) : undefined;
+
+            console.log('\n⚠️  This will undo the first bulk apply for a given week:');
+            console.log(' - Reset selection_correct to NULL for that week');
+            console.log(' - Delete tblPicksLeft rows for Week = week + 1 for affected users\n');
+
+            const ok = await confirmPrompt(`Are you sure you want to proceed${week ? ` for week ${week}` : ''}?`);
+            if (!ok) {
+                console.log('Aborted by user.');
+                return;
+            }
+
+            await undoAllPicksRun(week);
+        },
+
+        help() {
+            console.log('\nAvailable commands:');
+            console.log(' checkUserPicks <userID> <groupID> [week]  - Dry-run for one user (no writes)');
+            console.log(' checkAllPicks [week]                      - Dry-run for all users (no writes)');
+            console.log(' applyAllPicks [week]                      - Plan and commit for all users');
+            console.log(' undoAllPicks [week]                       - Undo the first bulk apply for a given week');
+            console.log(' help                                      - Show this help message');
+            console.log(' exit                                      - Exit the CLI\n');
+        },
+
+        exit() {
+            console.log('Exiting CLI.');
+            rl.close();
+            try { sql.close(); } catch (e) { /* ignore */ }
+            process.exit(0);
+        }
+    };
+
+    // --- dispatcher ---
+    rl.on('line', async (line) => {
+        const [cmd, ...args] = line.trim().split(/\s+/);
+        const fn = commands[cmd];
+        if (!fn) {
+            console.log(`Unknown command: ${cmd}. Type 'help' for a list of commands.`);
+            return rl.prompt();
+        }
+        try {
+            const out = fn(...args);
+            if (out && typeof out.then === 'function') {
+                await out;
+            }
+        } catch (err) {
+            console.error('Error executing command:', err || err.message || err.toString());
+        } finally {
+            rl.prompt();
+        }
+    });
+
+    // Make ctrl+c behave like 'exit'
+    rl.on('SIGINT', () => {
+        commands.exit();
+    });
+
+    console.log('Welcome to the CFB Picks CLI. Type "help" for a list of commands.');
+    rl.prompt();
 }
 
-async function getLastGameOfWeekStart(gameData, weekNumber) {
-    const gamesForWeek = gameData.filter(game => game.week === weekNumber)
-                                  .sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
 
-    return gamesForWeek.length > 0 ? gamesForWeek[0].startDate : null;
-}
-
-//scheduleChecks();
-
-      // To manually run the game checks
-async function runGameChecks() {
-    try {
-        // Get all games for the current season
-        console.log('Checking games');
-        const gamesData = await getAllGames();
-
-        // Determine the current football week number
-        const weekNumber = getFootballWeekNumber(gamesData);
-        currentFootballWeekNumber = weekNumber;
-        console.log(currentFootballWeekNumber);
-
-        // Check winners for the previous week
-        await checkWinners(weekNumber - 1);
-
-        // Add picks left for the previous week
-        await addPicksLeft(weekNumber - 1);
-        console.log('Game checks completed successfully');
-    } catch (error) {
-        console.error('Error running game checks:', error);
-    }
-}
-
-//runGameChecks();
-
-
-app.listen(HTTP_PORT);
+poolPromise.then(() => {
+    app.listen(HTTP_PORT, () => {
+        console.log(`Server is running on port ${HTTP_PORT}`);
+        startCli();
+    });
+}).catch(err => {
+    console.error('Database connection failed:', err);
+    process.exit(1);
+});

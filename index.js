@@ -1089,7 +1089,7 @@ const cron = require('node-cron');
 const fetch = require('node-fetch');
 
 let year = new Date().getFullYear();
-let currentFootballWeekNumber = 6;
+let currentFootballWeekNumber = 7;
 
 /*
     Functionality to change the year on July 1st and delete database entries for tblPicksLeft, tblSelections, tblGroupMembers, and then tblGroups

@@ -145,57 +145,59 @@ app.post('/users', async (req, res) => {
 });
 
 // Get userID while verifying user exists
-app.get('/users', async (req, res, next) => {
-    let strEmail = req.query.email;
-    let strPassword = req.query.password;
+app.post('/login', async (req, res) => {
+    const strIdentifier = req.body.identifier?.trim();
+    const strPassword = req.body.password;
 
-    if (strEmail && strPassword) {
-        try {
-            const pool = await poolPromise;
+    if (!strIdentifier || !strPassword) {
+        return res.status(400).json({
+            error: 'Email or username and password are required.'
+        });
+    }
 
-            // Step 1: Get the hashed password from the database
-            const result = await pool.request()
-                .input('Email', sql.VarChar, strEmail)
-                .query('SELECT Password FROM tblUsers WHERE Email = @Email');
+    try {
+        const pool = await poolPromise;
 
-            if (result.recordset.length >= 1) {
-                let hashedPass = result.recordset[0].Password;
+        const result = await pool.request()
+            .input('Identifier', sql.VarChar, strIdentifier)
+            .query(`
+                SELECT UserID, Email, Username, Password
+                FROM dbo.tblUsers
+                WHERE Email = @Identifier
+                   OR Username = @Identifier
+            `);
 
-                // Step 2: Compare the provided password with the hashed password
-                bcrypt.compare(strPassword, hashedPass, async function (err, match) {
-                    if (err) {
-                        return res.status(500).json({ error: 'Server error' });
-                    }
-
-                    if (match) {
-                        // Step 3: If password matches, retrieve the UserID
-                        const userResult = await pool.request()
-                            .input('Email', sql.VarChar, strEmail)
-                            .input('Password', sql.VarChar, hashedPass)
-                            .query('SELECT UserID FROM tblUsers WHERE Email = @Email AND Password = @Password');
-
-                        if (userResult.recordset.length >= 1) {
-                            let strUserID = userResult.recordset[0].UserID;
-                            res.status(201).json({
-                                message: "success",
-                                userID: strUserID
-                            });
-                        } else {
-                            res.status(400).json({ error: 'User not found' });
-                        }
-                    } else {
-                        res.status(200).json({ error: "Invalid Credentials" });
-                    }
-                });
-            } else {
-                res.status(200).json({ error: "Invalid Credentials" });
-            }
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ error: err.message });
+        if (result.recordset.length !== 1) {
+            return res.status(401).json({
+                error: 'Invalid credentials.'
+            });
         }
-    } else {
-        res.status(400).json({ error: 'Missing email or password' });
+
+        const user = result.recordset[0];
+
+        const passwordMatches = await bcrypt.compare(
+            strPassword,
+            user.Password
+        );
+
+        if (!passwordMatches) {
+            return res.status(401).json({
+                error: 'Invalid credentials.'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'success',
+            userID: user.UserID,
+            email: user.Email,
+            username: user.Username
+        });
+    } catch (err) {
+        console.error('Login error:', err);
+
+        return res.status(500).json({
+            error: 'Server error.'
+        });
     }
 });
 

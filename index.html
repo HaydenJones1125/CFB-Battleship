@@ -49,8 +49,8 @@
             </div>
             <div class="card-body">
                 <form>
-                    <label for="txtLoginEmail" class="form-label">Email</label>
-                    <input id="txtLoginEmail" class="form-control" type="email" style="text-transform: lowercase;">
+                    <label for="txtLoginIdentifier" class="form-label">Email or Username</label>
+                    <input id="txtLoginIdentifier" class="form-control" type="text" autocomplete="username">
                     <label for="txtLoginPassword" class="form-label mt-3">Password</label>
                     <input id="txtLoginPassword" class="form-control" type="password">
                     <div class="d-flex justify-content-evenly mt-3 button-container">
@@ -681,62 +681,98 @@
         })
 
         //login the user
-        $('#btnLogin').on('click', function(){
-            let strEmail = $('#txtLoginEmail').val();
-            let strPassword = $('#txtLoginPassword').val();
+        // Login the user
+        $('#btnLogin').on('click', function () {
+            const strIdentifier = $('#txtLoginIdentifier').val().trim();
+            const strPassword = $('#txtLoginPassword').val();
 
-            let blnError = false;
             let strErrorMessage = '';
-            if (strEmail.length < 1){
-                blnError = true;
-                strErrorMessage = strErrorMessage + 'Email cannot be blank.  ';
+
+            if (strIdentifier.length < 1) {
+                strErrorMessage += 'Email or username cannot be blank. ';
             }
-            if (strPassword.length < 1){
-                blnError = true;
-                strErrorMessage = strErrorMessage + 'Password cannot be blank.  ';
+
+            if (strPassword.length < 1) {
+                strErrorMessage += 'Password cannot be blank.';
             }
-            if (blnError == true){
-                Swal.fire({
-                    title: "Oops",
+
+            if (strErrorMessage) {
+                return Swal.fire({
+                    title: 'Oops',
                     text: strErrorMessage,
-                    icon: "error"
+                    icon: 'error'
                 });
-            } else {
-                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/users?email=' + strEmail + '&password=' + strPassword, function(result){
-                    if (!result.error){
-                        let strUserID = result.userID;
-                        userID = strUserID;     //set globalUserID
-                        $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/sessions', {email: strEmail, password: strPassword}, function(result){
-                            if(result.Error){
-                                Swal.fire({
-                                    title: "Oops",
-                                    html: '<p>' + result.Error  + '</p>',
-                                    icon: "error"
-                                });
-                            } else {
-                                sessionStorage.setItem('SessionID', result.sessionid)
-                                displayPicksGroups();
-                                displayYourGroups();
-                                Swal.fire({
-                                    title: "Success",
-                                    text: "User and Session Created",
-                                    icon: "success"
-                                })
-                                $('#divLogin').slideToggle(function(){
-                                    $('#divDashboard').slideToggle();
-                                })
-                            }
-                        })
-                    } else {
-                        Swal.fire({
-                            title:"Incorrect Credentials",
-                            text: "Incorrect Credentials Were Provided",
-                            icon: "error"
-                        })
-                    }
-                })
             }
-        })
+
+            $.ajax({
+                url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/login',
+                method: 'POST',
+                contentType: 'application/x-www-form-urlencoded',
+                data: {
+                    identifier: strIdentifier,
+                    password: strPassword
+                },
+
+                success: function (loginResult) {
+                    userID = loginResult.userID;
+
+                    // Use the actual email returned by /login.
+                    // This is important when the user logged in with a username.
+                    $.post(
+                        'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/sessions',
+                        {
+                            email: loginResult.email,
+                            password: strPassword
+                        },
+                        function (sessionResult) {
+                            if (sessionResult.Error) {
+                                return Swal.fire({
+                                    title: 'Oops',
+                                    text: sessionResult.Error,
+                                    icon: 'error'
+                                });
+                            }
+
+                            sessionStorage.setItem(
+                                'SessionID',
+                                sessionResult.sessionid
+                            );
+
+                            displayPicksGroups();
+                            displayYourGroups();
+
+                            Swal.fire({
+                                title: 'Success',
+                                text: 'Login successful.',
+                                icon: 'success'
+                            });
+
+                            $('#divLogin').slideToggle(function () {
+                                $('#divDashboard').slideToggle();
+                            });
+                        }
+                    ).fail(function (xhr) {
+                        Swal.fire({
+                            title: 'Oops',
+                            text:
+                                xhr.responseJSON?.error ||
+                                'The session could not be created.',
+                            icon: 'error'
+                        });
+                    });
+                },
+
+                error: function (xhr) {
+                    Swal.fire({
+                        title: 'Incorrect Credentials',
+                        text:
+                            xhr.responseJSON?.error ||
+                            'The email, username, or password was incorrect.',
+                        icon: 'error'
+                    });
+                }
+            });
+        });
 
         // Change password
         $('#btnChangePassword').on('click', function () {

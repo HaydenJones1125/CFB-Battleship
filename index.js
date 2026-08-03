@@ -44,46 +44,103 @@ let poolPromise = sql.connect(config)
     });
 
 // Create a new user and return userID
-app.post('/users', async (req, res, next) => {
-    let strFirstName = req.body.firstName;
-    let strLastName = req.body.lastName;
-    let strUsername = req.body.username;
-    let strEmail = req.body.email;
-    let strPassword = req.body.password;
-    let strUserID = uuidv4();
+app.post('/users', async (req, res) => {
+    const strFirstName = req.body.firstName?.trim();
+    const strLastName = req.body.lastName?.trim();
+    const strUsername = req.body.username?.trim();
+    const strEmail = req.body.email?.trim().toLowerCase();
+    const strPassword = req.body.password;
+    const strUserID = uuidv4();
 
-    if (!strFirstName || !strLastName || !strUsername || !strEmail || !strPassword) {
-        res.status(400).send("Missing required fields");
-    } else {
-        try {
-            const hashedPassword = await bcrypt.hash(strPassword, 10);
+    if (
+        !strFirstName ||
+        !strLastName ||
+        !strUsername ||
+        !strEmail ||
+        !strPassword
+    ) {
+        return res.status(400).json({
+            message: 'Missing required fields.'
+        });
+    }
 
-            // Use the existing pool connection
-            const pool = await poolPromise;
+    try {
+        const pool = await poolPromise;
 
-            // Execute the query
-            const request = pool.request();
-            request.input('UserID', sql.UniqueIdentifier, strUserID);
-            request.input('Email', sql.VarChar, strEmail);
-            request.input('Username', sql.VarChar, strUsername);
-            request.input('Password', sql.VarChar, hashedPassword);
-            request.input('FirstName', sql.VarChar, strFirstName);
-            request.input('LastName', sql.VarChar, strLastName);
+        // Check for an existing username or email.
+        const existingResult = await pool.request()
+            .input('Username', sql.VarChar, strUsername)
+            .input('Email', sql.VarChar, strEmail)
+            .query(`
+                SELECT Username, Email
+                FROM dbo.tblUsers
+                WHERE Username = @Username
+                   OR Email = @Email
+            `);
 
-            const result = await request.query(
-                `INSERT INTO tblUsers (UserID, Email, Username, Password, FirstName, LastName)
-                    VALUES (@UserID, @Email, @Username, @Password, @FirstName, @LastName)`
-            );
+        const errors = {};
 
-            res.status(201).json({
-                message: "success",
-                userID: strUserID,
-                email: strEmail
-            });
-        } catch (err) {
-            console.error(err);
-            res.status(409).json({ error: err.message });
+        for (const user of existingResult.recordset) {
+            if (
+                user.Username &&
+                user.Username.toLowerCase() === strUsername.toLowerCase()
+            ) {
+                errors.username = 'That username is already taken.';
+            }
+
+            if (
+                user.Email &&
+                user.Email.toLowerCase() === strEmail.toLowerCase()
+            ) {
+                errors.email = 'An account already exists with that email.';
+            }
         }
+
+        if (Object.keys(errors).length > 0) {
+            return res.status(409).json({
+                message: 'Username or email is already in use.',
+                errors
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(strPassword, 10);
+
+        await pool.request()
+            .input('UserID', sql.UniqueIdentifier, strUserID)
+            .input('Email', sql.VarChar, strEmail)
+            .input('Username', sql.VarChar, strUsername)
+            .input('Password', sql.VarChar, hashedPassword)
+            .input('FirstName', sql.VarChar, strFirstName)
+            .input('LastName', sql.VarChar, strLastName)
+            .query(`
+                INSERT INTO dbo.tblUsers
+                    (UserID, Email, Username, Password, FirstName, LastName)
+                VALUES
+                    (@UserID, @Email, @Username, @Password, @FirstName, @LastName)
+            `);
+
+        return res.status(201).json({
+            message: 'Account created successfully.',
+            userID: strUserID,
+            email: strEmail
+        });
+    } catch (err) {
+        console.error('Error creating user:', err);
+
+        // Handles a rare race condition where another account is created
+        // after the duplicate check but before this insert.
+        if (err.number === 2601 || err.number === 2627) {
+            return res.status(409).json({
+                message: 'Username or email is already in use.',
+                errors: {
+                    account: 'That username or email was just registered. Please try another.'
+                }
+            });
+        }
+
+        return res.status(500).json({
+            message: 'Could not create user.'
+        });
     }
 });
 

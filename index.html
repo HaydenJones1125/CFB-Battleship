@@ -811,28 +811,56 @@
   const toForm = (obj) => new URLSearchParams(obj).toString();
 
   try {
-    // 1) Register user (urlencoded)
-    const resUsers = await fetch('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: toForm({
-        firstName: strFirstName,
-        lastName: strLastName,
-        username: strUsername,
-        email: strEmail,
-        password: strPassword
-      })
-    });
+    // Register user
+    const resUsers = await fetch(
+        'http://localhost:8080/users',
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: toForm({
+                firstName: strFirstName,
+                lastName: strLastName,
+                username: strUsername,
+                email: strEmail,
+                password: strPassword
+            })
+        }
+    );
 
     const dataUsers = await resUsers.json().catch(() => ({}));
 
     if (!resUsers.ok) {
-      // Handle duplicate email (409) and other errors
-      const msg = dataUsers.error || dataUsers.message || 'Could not create user.';
-      if (resUsers.status === 409) {
-        return Swal.fire({ title: 'Error', text: 'Email already registered', icon: 'error' });
-      }
-      return Swal.fire({ title: 'Error', text: msg, icon: 'error' });
+        if (resUsers.status === 409) {
+            const errors = [];
+
+            if (dataUsers.errors?.username) {
+                errors.push(dataUsers.errors.username);
+            }
+
+            if (dataUsers.errors?.email) {
+                errors.push(dataUsers.errors.email);
+            }
+
+            if (dataUsers.errors?.account) {
+                errors.push(dataUsers.errors.account);
+            }
+
+            return Swal.fire({
+                title: 'Registration Error',
+                html: errors.length
+                    ? errors.map(error => `<div>${error}</div>`).join('')
+                    : 'Username or email is already in use.',
+                icon: 'error'
+            });
+        }
+
+        return Swal.fire({
+            title: 'Error',
+            text: dataUsers.message || 'Could not create user.',
+            icon: 'error'
+        });
     }
 
     const userID = dataUsers.userID; // if you need it later

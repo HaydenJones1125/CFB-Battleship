@@ -1820,8 +1820,94 @@ poolPromise.then(() => {
     app.listen(HTTP_PORT, () => {
         console.log(`Server is running on port ${HTTP_PORT}`);
         startCli();
+        loadTeamLogos(year)
     });
 }).catch(err => {
     console.error('Database connection failed:', err);
     process.exit(1);
 });
+
+
+
+/*
+    Get all teams and a logo and store into a lookup table
+*/
+const teamLogoLookup = new Map();
+const teamLogoByID = new Map();
+
+
+
+function normalizeTeamName(teamName) {
+    return String(teamName ?? '').trim().toLowerCase()
+}
+
+async function loadTeamLogos(year) {
+    const apiURL = `https://api.collegefootballdata.com`
+    const response = await fetch(
+        `${apiURL}/teams/fbs?year=${year}`,
+        {
+            headers: {
+                accept: 'application/json',
+                Authorization: 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+            }
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch team logos: ${response.status} ${response.statusText}`);
+    }
+
+    const teams = await response.json();
+
+    if (!Array.isArray(teams) || teams.length === 0) {
+        throw new Error('No teams data received from API');
+    }
+
+    // Clear existing data before loading new data
+    teamLogoLookup.clear();
+    teamLogoByID.clear();
+
+    for(const team of teams) {
+        const logos = Array.isArray(team.logos) ? team.logos : [];
+
+        // Store the 64x64 logo (At the time was in 9th spot)
+        const logoURL = logos[8] || logos[0] || null;
+
+        if (!team.school || !logoURL) {
+            console.warn(
+                `No logo found for ${team.school ?? 'unknkown team'}.`
+            );
+
+            continue; // Skip this team if no logo is found
+        }
+
+        teamLogoLookup.set(
+            normalizeTeamName(team.school),
+            logoURL
+        );
+
+        if(team.id !== undefined && team.id !== null) {
+            teamLogoByID.set(Number(team.id), logoURL);
+        }
+    }
+
+    console.log(`Loaded ${teamLogoLookup.size} team logos for year ${year}.`);
+
+    return teamLogoLookup.size;
+}
+
+function getTeamLogo(teamName) {
+    return (
+        teamLogoLookup.get(normalizeTeamName(teamName)) ?? null
+    );
+}
+
+function getTeamLogoByID(teamID) {
+    return teamLogoByID.get(number(teamID)) ?? null;
+}
+
+function getAllTeamLogos() {
+    //Convert map into a regular object before returning
+    return Object.fromEntries(teamLogoLookup);
+}
+

@@ -1177,7 +1177,7 @@ app.get('/teamLogoByID', (req, res) => {
 })
 
 // Get spreads for the week
-app.get('/spreads', async (req, res, next) => {
+app.get('/weeklySpreads', async (req, res, next) => {
     try {
         const spreadsData = await getSpreads(currentFootballWeekNumber);
         res.status(200).json({

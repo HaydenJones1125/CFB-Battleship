@@ -1140,6 +1140,42 @@ app.get('/year', (req, res, next) => {
     })
 });
 
+// Get all team logos
+app.get('/teamLogos', (req, res) => {
+    res.status(200).json({
+        message: "success",
+        teamLogos: getAllTeamLogos()
+    });
+});
+
+// Get team logo by team name
+app.get('/teamLogo', (req, res) => {
+    let teamName = req.query.teamName;
+    getTeamLogo(teamName).then(logo => {
+        res.status(200).json({
+            message: "success",
+            teamLogo: logo
+        });
+    }).catch(err => {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch team logo' });
+    });
+})
+
+// Get team logo by id
+app.get('/teamLogoByID', (req, res) => {
+    let teamID = req.query.teamID;
+    getTeamLogoByID(teamID).then(logo => {
+        res.status(200).json({
+            message: "success",
+            teamLogo: logo
+        });
+    }).catch(err => {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch team logo' });
+    });
+})
+
 /*
     Updating Week Number Automatically Each Monday
 */

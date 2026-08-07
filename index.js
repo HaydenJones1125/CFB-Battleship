@@ -1176,6 +1176,20 @@ app.get('/teamLogoByID', (req, res) => {
     });
 })
 
+// Get spreads for the week
+app.get('/spreads', async (req, res, next) => {
+    try {
+        const spreadsData = await getSpreads(currentFootballWeekNumber);
+        res.status(200).json({
+            message: "success",
+            spreads: spreadsData
+        });
+    } catch (error) {
+        console.error('Error fetching spreads:', error);
+        res.status(500).json({ error: 'Failed to fetch spreads' });
+    }
+});
+
 /*
     Updating Week Number Automatically Each Monday
 */
@@ -1927,8 +1941,6 @@ async function loadTeamLogos(year) {
         }
     }
 
-    console.log(`Loaded ${teamLogoLookup.size} team logos for year ${year}.`);
-
     return teamLogoLookup.size;
 }
 
@@ -1947,3 +1959,27 @@ function getAllTeamLogos() {
     return Object.fromEntries(teamLogoLookup);
 }
 
+async function getSpreads(week) {
+    const apiURL = `https://api.collegefootballdata.com`;
+    const response = await fetch(
+        `${apiURL}/lines?year=${year}&week=${week}&seasonType=regular`,
+        {
+            headers: {
+                accept: 'application/json',
+                Authorization: 'Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8'
+            }
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch spreads: ${response.status} ${response.statusText}`);
+    }
+
+    const spreads = await response.json();
+
+    if (!Array.isArray(spreads) || spreads.length === 0) {
+        throw new Error('No spreads data received from API');
+    }
+
+    return spreads;
+}

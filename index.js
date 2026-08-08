@@ -1894,7 +1894,7 @@ function normalizeTeamName(teamName) {
 async function loadTeamLogos(year) {
     const apiURL = `https://api.collegefootballdata.com`
     const response = await fetch(
-        `${apiURL}/teams/fbs?year=${year}`,
+        `${apiURL}/teams`,
         {
             headers: {
                 accept: 'application/json',

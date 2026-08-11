@@ -146,57 +146,99 @@ app.post('/users', async (req, res) => {
 
 // Get userID while verifying user exists
 app.post('/login', async (req, res) => {
-    const strIdentifier = req.body.identifier?.trim();
+    const strIdentifier = req.body.identifier;
     const strPassword = req.body.password;
+    const blnRememberMe =
+        req.body.rememberMe === 'true' ||
+        req.body.rememberMe === true;
 
     if (!strIdentifier || !strPassword) {
         return res.status(400).json({
-            error: 'Email or username and password are required.'
+            error: "Email/username and password are required"
         });
     }
 
     try {
         const pool = await poolPromise;
 
+        // Find user by email OR username
         const result = await pool.request()
             .input('Identifier', sql.VarChar, strIdentifier)
             .query(`
-                SELECT UserID, Email, Username, Password
-                FROM dbo.tblUsers
+                SELECT UserID, Email, Password
+                FROM tblUsers
                 WHERE Email = @Identifier
                    OR Username = @Identifier
             `);
 
-        if (result.recordset.length !== 1) {
+        if (result.recordset.length === 0) {
             return res.status(401).json({
-                error: 'Invalid credentials.'
+                error: "Invalid email, username, or password"
             });
         }
 
         const user = result.recordset[0];
 
-        const passwordMatches = await bcrypt.compare(
+        // Authenticate password ONCE
+        const match = await bcrypt.compare(
             strPassword,
             user.Password
         );
 
-        if (!passwordMatches) {
+        if (!match) {
             return res.status(401).json({
-                error: 'Invalid credentials.'
+                error: "Invalid email, username, or password"
             });
         }
 
+        // Create session
+        const strSessionID = uuidv4();
+
+        const expiresAt = new Date();
+
+        if (blnRememberMe) {
+            // Remember Me: 30 days
+            expiresAt.setUTCDate(expiresAt.getUTCDate() + 30);
+        } else {
+            // Normal session: 24 hours
+            expiresAt.setUTCHours(expiresAt.getUTCHours() + 24);
+        }
+
+        await pool.request()
+            .input(
+                'SessionID',
+                sql.UniqueIdentifier,
+                strSessionID
+            )
+            .input(
+                'UserID',
+                sql.UniqueIdentifier,
+                user.UserID
+            )
+            .input(
+                'ExpiresAt',
+                sql.DateTime2,
+                expiresAt
+            )
+            .query(`
+                INSERT INTO tblSessions
+                    (SessionID, UserID, ExpiresAt)
+                VALUES
+                    (@SessionID, @UserID, @ExpiresAt)
+            `);
+
         return res.status(200).json({
-            message: 'success',
+            message: "success",
             userID: user.UserID,
             email: user.Email,
-            username: user.Username
+            sessionid: strSessionID
         });
+
     } catch (err) {
-        console.error('Login error:', err);
+        console.error(err);
 
         return res.status(500).json({
-            error: 'Server error.'
+            error: "Server error"
         });
     }
 });
@@ -381,26 +423,46 @@ app.get('/userExists', async (req, res, next) => {
 // Gets userID from tblSessions using SessionID
 app.get('/userID', async (req, res, next) => {
     let strSessionID = req.query.SessionID;
-    
+
+    const guidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!strSessionID || !guidRegex.test(strSessionID)) {
+        console.log("Invalid SessionID received:", strSessionID);
+
+        return res.status(400).json({
+            message: "Invalid SessionID"
+        });
+    }
+
     try {
-        const pool = await poolPromise; // Reuse the existing connection pool
+        const pool = await poolPromise;
+
         const result = await pool.request()
-            .input('SessionID', sql.UniqueIdentifier, strSessionID) // Use parameterized queries
-            .query('SELECT UserID FROM dbo.tblSessions WHERE SessionID = @SessionID');
-    
+            .input('SessionID', sql.UniqueIdentifier, strSessionID)
+            .query(`
+                SELECT UserID
+                FROM dbo.tblSessions
+                WHERE SessionID = @SessionID
+                AND ExpiresAt > SYSUTCDATETIME()
+            `);
+
         if (result.recordset.length > 0) {
-            res.status(201).json({
+            res.status(200).json({
                 message: "success",
                 userID: result.recordset[0].UserID
             });
         } else {
-            res.status(201).json({
-                message: "Session not found"
+            res.status(200).json({
+                message: "Session not found or expired"
             });
         }
     } catch (err) {
         console.error(err);
-        res.status(500).send('Server error');
+
+        res.status(500).json({
+            message: "Server error"
+        });
     }
 });
 
@@ -408,6 +470,8 @@ app.get('/userID', async (req, res, next) => {
 app.post('/sessions', async (req, res, next) => {
     let strEmail = req.body.email;
     let strPassword = req.body.password;
+    let blnRememberMe = req.body.rememberMe === 'true' || req.body.rememberMe === true;
+
     let strSessionID = uuidv4();
 
     if (strEmail && strPassword) {
@@ -417,7 +481,11 @@ app.post('/sessions', async (req, res, next) => {
             // Step 1: Get the hashed password from the database
             const result = await pool.request()
                 .input('Email', sql.VarChar, strEmail)
-                .query('SELECT Password FROM tblUsers WHERE Email = @Email');
+                .query(`
+                    SELECT Password
+                    FROM tblUsers
+                    WHERE Email = @Email
+                `);
 
             if (result.recordset.length > 0) {
                 let hashedPass = result.recordset[0].Password;
@@ -430,36 +498,75 @@ app.post('/sessions', async (req, res, next) => {
                     const userResult = await pool.request()
                         .input('Email', sql.VarChar, strEmail)
                         .input('Password', sql.VarChar, hashedPass)
-                        .query('SELECT UserID FROM tblUsers WHERE Email = @Email AND Password = @Password');
+                        .query(`
+                            SELECT UserID
+                            FROM tblUsers
+                            WHERE Email = @Email
+                            AND Password = @Password
+                        `);
 
                     if (userResult.recordset.length > 0) {
                         let strUserID = userResult.recordset[0].UserID;
 
-                        // Step 4: Insert a new session into tblSessions
+                        // Determine session expiration
+                        let expiresAt = new Date();
+
+                        if (blnRememberMe) {
+                            // Remember Me = 30 days
+                            expiresAt.setUTCDate(expiresAt.getUTCDate() + 30);
+                        } else {
+                            // Normal session = 24 hours
+                            expiresAt.setUTCHours(expiresAt.getUTCHours() + 24);
+                        }
+
+                        // Step 4: Insert new session
                         await pool.request()
                             .input('SessionID', sql.UniqueIdentifier, strSessionID)
                             .input('UserID', sql.UniqueIdentifier, strUserID)
-                            .query('INSERT INTO tblSessions (SessionID, UserID) VALUES (@SessionID, @UserID)');
+                            .input('ExpiresAt', sql.DateTime2, expiresAt)
+                            .query(`
+                                INSERT INTO tblSessions (
+                                    SessionID,
+                                    UserID,
+                                    ExpiresAt
+                                )
+                                VALUES (
+                                    @SessionID,
+                                    @UserID,
+                                    @ExpiresAt
+                                )
+                            `);
 
                         res.status(201).json({
                             message: "success",
                             sessionid: strSessionID
                         });
                     } else {
-                        res.status(400).json({ error: "User not found" });
+                        res.status(400).json({
+                            error: "User not found"
+                        });
                     }
                 } else {
-                    res.status(400).json({ error: "Invalid password" });
+                    res.status(400).json({
+                        error: "Invalid password"
+                    });
                 }
             } else {
-                res.status(400).json({ error: "Email not found" });
+                res.status(400).json({
+                    error: "Email not found"
+                });
             }
         } catch (err) {
             console.error(err);
-            res.status(500).json({ error: err.message });
+
+            res.status(500).json({
+                error: err.message
+            });
         }
     } else {
-        res.status(400).json({ error: "Not all parameters provided" });
+        res.status(400).json({
+            error: "Not all parameters provided"
+        });
     }
 });
 
@@ -756,49 +863,496 @@ app.get('/groupOwner', async (req, res, next) => {
     }
 });
 
-// Send made picks to database
-app.post('/selection', async (req, res, next) => {
-    let strUserID = req.body.userID;
-    let strPickedTeam = req.body.pickedTeam;
-    let strGroupID = req.body.groupID;
-    let strGameID = req.body.gameID;
-    let strWeek = req.body.week;
-    let strPickNum = req.body.pickNum;
-    let strSelectionCorrect = null;
+// Validate game for selection
+async function validateGameForSelection(
+    gameID,
+    pickedTeam = null
+) {
+    const games = await getCachedGames(
+        year,
+        currentFootballWeekNumber
+    );
 
-    if (strUserID && strPickedTeam && strGroupID && strGameID && strWeek && strPickNum) {
-        try {
-            const pool = await poolPromise;
+    const game = games.find(
+        game =>
+            Number(game.id) === Number(gameID)
+    );
 
-            // Execute the insert command
-            await pool.request()
-                .input('UserID', sql.UniqueIdentifier, strUserID)
-                .input('PickedTeam', sql.VarChar, strPickedTeam)
-                .input('GroupID', sql.UniqueIdentifier, strGroupID)
-                .input('GameID', sql.Int, strGameID)
-                .input('Week', sql.Int, strWeek)
-                .input('PickNum', sql.Int, strPickNum)
-                .input('SelectionCorrect', sql.Bit, strSelectionCorrect)
-                .query('INSERT INTO tblSelections (UserID, PickedTeam, GroupID, GameID, Week, PickNum, selection_correct) VALUES (@UserID, @PickedTeam, @GroupID, @GameID, @Week, @PickNum, @SelectionCorrect)');
+    if (!game) {
+        return {
+            valid: false,
+            status: 409,
+            error:
+                'This game is not available for selections in the current week.'
+        };
+    }
 
-            res.status(201).json({
-                message: "success",
-                userID: strUserID,
-                groupID: strGroupID,
-                week: strWeek,
-                pickNum: strPickNum
-            });
-        } catch (err) {
-            console.error(err);
-            res.status(400).json({ error: err.message });
+    const gameStartTime =
+        new Date(game.startDate).getTime();
+
+    if (Number.isNaN(gameStartTime)) {
+        return {
+            valid: false,
+            status: 500,
+            error:
+                'Unable to determine game start time.'
+        };
+    }
+
+    if (Date.now() >= gameStartTime) {
+        return {
+            valid: false,
+            status: 409,
+            error:
+                'This game has already started. Picks can no longer be changed.'
+        };
+    }
+
+    /*
+        POST/PUT only:
+        Verify selected team belongs to this game.
+    */
+    if (pickedTeam !== null) {
+
+        if (
+            pickedTeam !== game.homeTeam &&
+            pickedTeam !== game.awayTeam
+        ) {
+            return {
+                valid: false,
+                status: 400,
+                error:
+                    'The selected team is not part of this game.'
+            };
         }
-    } else {
-        res.status(400).json({ error: "Not all parameters provided" });
+
+        /*
+            Determine selected team's classification.
+        */
+        const selectedClassification =
+            pickedTeam === game.homeTeam
+                ? game.homeClassification
+                : game.awayClassification;
+
+        /*
+            Only FBS schools are eligible.
+        */
+        if (
+            selectedClassification?.toLowerCase() !== 'fbs'
+        ) {
+            return {
+                valid: false,
+                status: 400,
+                error:
+                    'Only FBS teams are eligible to be selected.'
+            };
+        }
+    }
+
+    return {
+        valid: true,
+        game
+    };
+}
+
+// Send made picks to database
+app.post('/selection', async (req, res) => {
+    const strUserID = req.body.userID;
+    const strPickedTeam = req.body.pickedTeam;
+    const strGroupID = req.body.groupID;
+    const intGameID = Number(req.body.gameID);
+    const intWeek = Number(req.body.week);
+
+    if (
+        !strUserID ||
+        !strPickedTeam ||
+        !strGroupID ||
+        !intGameID ||
+        !intWeek
+    ) {
+        return res.status(400).json({
+            error: 'Not all parameters provided.'
+        });
+    }
+
+    /*
+        Do your game-start validation BEFORE opening
+        the SQL transaction so the transaction stays short.
+    */
+    const validation =
+        await validateGameForSelection(
+            intGameID,
+            strPickedTeam
+        );
+
+    if (!validation.valid) {
+        return res
+            .status(validation.status)
+            .json({
+                error: validation.error
+            });
+    }
+
+    const pool = await poolPromise;
+
+    const transaction =
+        new sql.Transaction(pool);
+
+    try {
+
+        /*
+            SERIALIZABLE is important here.
+
+            It prevents another transaction from
+            inserting into the range we're checking
+            until this transaction finishes.
+        */
+        await transaction.begin(
+            sql.ISOLATION_LEVEL.SERIALIZABLE
+        );
+
+
+        /*
+            1. Check whether this user already has
+               a selection for this exact game.
+        */
+        const existingGameRequest =
+            new sql.Request(transaction);
+
+        const existingGameResult =
+            await existingGameRequest
+
+                .input(
+                    'UserID',
+                    sql.UniqueIdentifier,
+                    strUserID
+                )
+
+                .input(
+                    'GroupID',
+                    sql.UniqueIdentifier,
+                    strGroupID
+                )
+
+                .input(
+                    'GameID',
+                    sql.Int,
+                    intGameID
+                )
+
+                .query(`
+                    SELECT
+                        PickedTeam
+
+                    FROM tblSelections
+                    WITH (UPDLOCK, HOLDLOCK)
+
+                    WHERE UserID = @UserID
+                    AND GroupID = @GroupID
+                    AND GameID = @GameID
+                `);
+
+
+        /*
+            A selection already exists for this game.
+        */
+        if (
+            existingGameResult.recordset.length > 0
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(409).json({
+                error:
+                    'You already have a selection for this game.'
+            });
+        }
+
+
+        /*
+            2. Get number of picks allowed.
+        */
+        const picksLeftRequest =
+            new sql.Request(transaction);
+
+        const picksLeftResult =
+            await picksLeftRequest
+
+                .input(
+                    'UserID',
+                    sql.UniqueIdentifier,
+                    strUserID
+                )
+
+                .input(
+                    'GroupID',
+                    sql.UniqueIdentifier,
+                    strGroupID
+                )
+
+                .input(
+                    'Week',
+                    sql.Int,
+                    intWeek
+                )
+
+                .query(`
+                    SELECT TOP 1
+                        PicksLeft
+
+                    FROM tblPicksLeft
+
+                    WHERE UserID = @UserID
+                    AND GroupID = @GroupID
+                    AND Week <= @Week
+
+                    ORDER BY Week DESC
+                `);
+
+
+        if (
+            picksLeftResult.recordset.length === 0
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(404).json({
+                error:
+                    'Picks remaining could not be found.'
+            });
+        }
+
+
+        const intPicksAllowed =
+            Number(
+                picksLeftResult
+                    .recordset[0]
+                    .PicksLeft
+            );
+
+
+        /*
+            3. Count selections already made this week.
+        */
+        const countRequest =
+            new sql.Request(transaction);
+
+        const countResult =
+            await countRequest
+
+                .input(
+                    'UserID',
+                    sql.UniqueIdentifier,
+                    strUserID
+                )
+
+                .input(
+                    'GroupID',
+                    sql.UniqueIdentifier,
+                    strGroupID
+                )
+
+                .input(
+                    'Week',
+                    sql.Int,
+                    intWeek
+                )
+
+                .query(`
+                    SELECT
+                        COUNT(*) AS SelectionCount
+
+                    FROM tblSelections
+                    WITH (UPDLOCK, HOLDLOCK)
+
+                    WHERE UserID = @UserID
+                    AND GroupID = @GroupID
+                    AND Week = @Week
+                `);
+
+
+        const intCurrentSelections =
+            Number(
+                countResult
+                    .recordset[0]
+                    .SelectionCount
+            );
+
+
+        /*
+            User already made all allowed picks.
+        */
+        if (
+            intCurrentSelections >=
+            intPicksAllowed
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(409).json({
+                error:
+                    `You have already made all ${intPicksAllowed} picks. Remove a pick before selecting another.`
+            });
+        }
+
+
+        /*
+            4. Check whether this exact team has
+               already been selected this week.
+        */
+        const duplicateTeamRequest =
+            new sql.Request(transaction);
+
+        const duplicateTeamResult =
+            await duplicateTeamRequest
+
+                .input(
+                    'UserID',
+                    sql.UniqueIdentifier,
+                    strUserID
+                )
+
+                .input(
+                    'GroupID',
+                    sql.UniqueIdentifier,
+                    strGroupID
+                )
+
+                .input(
+                    'Week',
+                    sql.Int,
+                    intWeek
+                )
+
+                .input(
+                    'PickedTeam',
+                    sql.VarChar(100),
+                    strPickedTeam
+                )
+
+                .query(`
+                    SELECT
+                        PickedTeam
+
+                    FROM tblSelections
+                    WITH (UPDLOCK, HOLDLOCK)
+
+                    WHERE UserID = @UserID
+                    AND GroupID = @GroupID
+                    AND Week = @Week
+                    AND PickedTeam = @PickedTeam
+                `);
+
+
+        if (
+            duplicateTeamResult.recordset.length > 0
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(409).json({
+                error:
+                    'You have already selected this team.'
+            });
+        }
+
+
+        /*
+            5. Insert selection.
+        */
+        const insertRequest =
+            new sql.Request(transaction);
+
+        await insertRequest
+
+            .input(
+                'UserID',
+                sql.UniqueIdentifier,
+                strUserID
+            )
+
+            .input(
+                'PickedTeam',
+                sql.VarChar(100),
+                strPickedTeam
+            )
+
+            .input(
+                'GroupID',
+                sql.UniqueIdentifier,
+                strGroupID
+            )
+
+            .input(
+                'GameID',
+                sql.Int,
+                intGameID
+            )
+
+            .input(
+                'Week',
+                sql.Int,
+                intWeek
+            )
+
+            .query(`
+                INSERT INTO tblSelections (
+                    UserID,
+                    PickedTeam,
+                    GroupID,
+                    GameID,
+                    Week,
+                    selection_correct
+                )
+
+                VALUES (
+                    @UserID,
+                    @PickedTeam,
+                    @GroupID,
+                    @GameID,
+                    @Week,
+                    NULL
+                )
+            `);
+
+
+        /*
+            Everything succeeded.
+        */
+        await transaction.commit();
+
+        return res.status(200).json({
+            message:
+                'Selection added successfully.',
+            pickedTeam:
+                strPickedTeam,
+            gameID:
+                intGameID
+        });
+
+    } catch (err) {
+
+        /*
+            Roll back if the transaction
+            is still active.
+        */
+        try {
+            await transaction.rollback();
+        } catch (rollbackErr) {
+            // Transaction may already be rolled back.
+        }
+
+        console.error(err);
+
+        return res.status(500).json({
+            error:
+                'Unable to create selection.'
+        });
     }
 });
 
-// Get selectiosn by groupID and userID
-app.get('/selections', async (req, res, next) => {
+// Get selections by groupID and userID
+app.get('/selection', async (req, res, next) => {
     let strGroupID = req.query.groupID;
     let strUserID = req.query.userID;
 
@@ -825,39 +1379,205 @@ app.get('/selections', async (req, res, next) => {
     }
 });
 
-// Delete selection by groupID, userID and gameID
-app.delete('/selections', async (req, res, next) => {
-    let strGroupID = req.query.groupID;
-    let strUserID = req.query.userID;
-    let strGameID = req.query.gameID;
+app.put('/selection', async (req, res) => {
 
-    if (strGroupID && strUserID && strGameID) {
-        try {
-            const pool = await poolPromise;
+    const strUserID =
+        req.body.userID;
 
-            // Execute the delete command
-            const result = await pool.request()
-                .input('GroupID', sql.UniqueIdentifier, strGroupID)
-                .input('UserID', sql.UniqueIdentifier, strUserID)
-                .input('GameID', sql.Int, strGameID)
-                .query('DELETE FROM tblSelections WHERE GroupID = @GroupID AND UserID = @UserID AND GameID = @GameID');
+    const strGroupID =
+        req.body.groupID;
 
-            if (result.rowsAffected[0] > 0) {
-                res.status(200).json({
-                    message: "success",
-                    groupID: strGroupID,
-                    userID: strUserID,
-                    gameID: strGameID
+    const intGameID =
+        Number(req.body.gameID);
+
+    const strPickedTeam =
+        req.body.pickedTeam;
+
+    if (
+        !strUserID ||
+        !strGroupID ||
+        !intGameID ||
+        !strPickedTeam
+    ) {
+        return res.status(400).json({
+            error: 'Not all parameters provided.'
+        });
+    }
+
+    try {
+
+        /*
+            Check kickoff and make sure
+            pickedTeam belongs to the game.
+        */
+        const validation =
+            await validateGameForSelection(
+                intGameID,
+                strPickedTeam
+            );
+
+        if (!validation.valid) {
+            return res
+                .status(validation.status)
+                .json({
+                    error: validation.error
                 });
-            } else {
-                res.status(404).json({ error: "Selection not found" });
-            }
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ error: err.message });
         }
-    } else {
-        res.status(400).json({ error: "Not all parameters provided" });
+
+        const pool =
+            await poolPromise;
+
+        const result =
+            await pool.request()
+
+                .input(
+                    'UserID',
+                    sql.UniqueIdentifier,
+                    strUserID
+                )
+
+                .input(
+                    'GroupID',
+                    sql.UniqueIdentifier,
+                    strGroupID
+                )
+
+                .input(
+                    'GameID',
+                    sql.Int,
+                    intGameID
+                )
+
+                .input(
+                    'PickedTeam',
+                    sql.VarChar(100),
+                    strPickedTeam
+                )
+
+                .query(`
+                    UPDATE tblSelections
+
+                    SET PickedTeam = @PickedTeam
+
+                    WHERE UserID = @UserID
+                    AND GroupID = @GroupID
+                    AND GameID = @GameID
+                `);
+
+        if (result.rowsAffected[0] === 0) {
+            return res.status(404).json({
+                error: 'Selection not found.'
+            });
+        }
+
+        return res.status(200).json({
+            message:
+                'Selection changed successfully.'
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        return res.status(500).json({
+            error:
+                'Unable to change selection.'
+        });
+    }
+});
+
+// Delete selection by groupID, userID and gameID
+app.delete('/selection', async (req, res) => {
+
+
+    const strGroupID =
+        req.body.groupID;
+
+    const strUserID =
+        req.body.userID;
+
+    const intGameID =
+        Number(req.body.gameID);
+
+    if (
+        !strGroupID ||
+        !strUserID ||
+        !intGameID
+    ) {
+        return res.status(400).json({
+            error: 'Not all parameters provided.'
+        });
+    }
+
+    try {
+
+        /*
+            Make sure game has not started.
+        */
+        const validation =
+            await validateGameForSelection(
+                intGameID
+            );
+        
+        if (!validation.valid) {
+            return res
+                .status(validation.status)
+                .json({
+                    error: validation.error
+                });
+        }
+
+        const pool =
+            await poolPromise;
+
+        const result =
+            await pool.request()
+
+                .input(
+                    'GroupID',
+                    sql.UniqueIdentifier,
+                    strGroupID
+                )
+
+                .input(
+                    'UserID',
+                    sql.UniqueIdentifier,
+                    strUserID
+                )
+
+                .input(
+                    'GameID',
+                    sql.Int,
+                    intGameID
+                )
+
+                .query(`
+                    DELETE FROM tblSelections
+
+                    WHERE GroupID = @GroupID
+                    AND UserID = @UserID
+                    AND GameID = @GameID
+                `);
+
+        if (result.rowsAffected[0] === 0) {
+            return res.status(404).json({
+                error: 'Selection not found.'
+            });
+        }
+
+        return res.status(200).json({
+            message:
+                'Selection removed successfully.'
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        return res.status(500).json({
+            error:
+                'Unable to remove selection.'
+        });
     }
 });
 
@@ -1177,7 +1897,7 @@ app.get('/teamLogoByID', (req, res) => {
 })
 
 // Get spreads for the week
-app.get('/spreads', async (req, res, next) => {
+app.get('/weeklySpreads', async (req, res, next) => {
     try {
         const spreadsData = await getSpreads(currentFootballWeekNumber);
         res.status(200).json({
@@ -1208,7 +1928,7 @@ function scheduleYearUpdate() {
     schedule.scheduleJob('0 0 1 7 *', function() {
         let currentYear = new Date().getFullYear();
         year = currentYear;
-        deleteDatabaseEntries();
+        //deleteDatabaseEntries();
     });
 }
 
@@ -1867,7 +2587,7 @@ function startCli() {
 
 
 poolPromise.then(() => {
-    app.listen(HTTP_PORT, () => {
+    app.listen(HTTP_PORT, '0.0.0.0', () => {
         console.log(`Server is running on port ${HTTP_PORT}`);
         startCli();
         loadTeamLogos(year)
@@ -1877,6 +2597,99 @@ poolPromise.then(() => {
     process.exit(1);
 });
 
+/*
+    Cache weekly games to avoid hitting the api too often.
+*/
+const GAME_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+let gameCache = {
+    year: null,
+    week: null,
+    games: [],
+    fetchedAt: 0
+};
+
+// Prevent multiple users from triggering
+// simultaneous CFBD refreshes.
+let gameCacheRefreshPromise = null;
+
+async function fetchGamesFromCFBD(year, week) {
+    const response = await fetch(
+        `https://api.collegefootballdata.com/games?year=${year}&week=${week}&seasonType=regular&division=fbs`,
+        {
+            headers: {
+                accept: 'application/json',
+                Authorization: `Bearer sKcweXypMseAJKc7yESIcdyMn4E5T2I0Oese0lKFWtNUmuhxmEB5O6CAMYotHDr8`
+            }
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `CFBD request failed: ${response.status}`
+        );
+    }
+
+    return await response.json();
+}
+
+async function getCachedGames(year, week) {
+    const currentTime = Date.now();
+
+    const cacheIsValid =
+        gameCache.year === Number(year) &&
+        gameCache.week === Number(week) &&
+        gameCache.games.length > 0 &&
+        currentTime - gameCache.fetchedAt < GAME_CACHE_TTL_MS;
+
+    /*
+        Cache is still good.
+
+        No CFBD request is made here.
+    */
+    if (cacheIsValid) {
+        return gameCache.games;
+    }
+
+    /*
+        Another request is already refreshing
+        the cache.
+
+        Wait for that request instead of
+        making another CFBD request.
+    */
+    if (gameCacheRefreshPromise) {
+        return await gameCacheRefreshPromise;
+    }
+
+    console.log(
+        `Refreshing game cache for ${year} Week ${week}`
+    );
+
+    gameCacheRefreshPromise =
+        fetchGamesFromCFBD(year, week);
+
+    try {
+        const games =
+            await gameCacheRefreshPromise;
+
+        gameCache = {
+            year: Number(year),
+            week: Number(week),
+            games: games,
+            fetchedAt: Date.now()
+        };
+
+        console.log(
+            `Cached ${games.length} games for ${year} Week ${week}`
+        );
+
+        return gameCache.games;
+
+    } finally {
+        gameCacheRefreshPromise = null;
+    }
+}
 
 
 /*
@@ -1922,14 +2735,6 @@ async function loadTeamLogos(year) {
 
         // Store the 64x64 logo (At the time was in 9th spot)
         const logoURL = logos[8] || logos[0] || null;
-
-        if (!team.school || !logoURL) {
-            console.warn(
-                `No logo found for ${team.school ?? 'unknkown team'}.`
-            );
-
-            continue; // Skip this team if no logo is found
-        }
 
         teamLogoLookup.set(
             normalizeTeamName(team.school),

@@ -218,6 +218,354 @@ nav a {
     min-width: 150px;
 }
 
+/* Team logo */
+
+.conference-team-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+
+/* Team name */
+
+.conference-team-name {
+    flex-grow: 1;
+}
+
+
+/* Current-week selection */
+
+.conference-team-selected {
+    border: 1px solid #0d6efd;
+    background-color: #e7f1ff;
+    color: #212529;
+}
+
+.conference-team-selected:hover {
+    background-color: #d9eaff;
+    border-color: #0d6efd;
+}
+
+
+/* Used in a previous week */
+
+.conference-team-unavailable {
+    border: 1px solid #ced4da;
+    background-color: #f1f3f5;
+    color: #6c757d;
+}
+
+.conference-team-unavailable:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.conference-team-unavailable .conference-team-logo {
+    filter: grayscale(100%);
+    opacity: 0.55;
+}
+
+/* =========================================
+   MATCHUP CARD
+   ========================================= */
+
+.matchup-card {
+    overflow: hidden;
+}
+
+
+/* =========================================
+   TEAM ROW / COLUMNS
+   ========================================= */
+
+.matchup-team-row {
+    margin: 0;
+    width: 100%;
+}
+
+.matchup-team-column {
+    padding: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+
+/* =========================================
+   TEAM BUTTON
+   ========================================= */
+
+.matchup-team {
+    position: relative;
+
+    display: block;
+
+    width: 100%;
+    min-width: 0;
+
+    margin: 0;
+
+    border: 0 !important;
+    border-radius: 0;
+
+    box-sizing: border-box;
+
+    background-color: transparent;
+}
+
+
+/* Normal available-team hover */
+.matchup-team:not(:disabled):not(.team-selected):hover {
+    background-color: #f8f9fa;
+}
+
+
+/* =========================================
+   SELECTED TEAM
+   ========================================= */
+
+.matchup-team.team-selected {
+    background-color: #e7f1ff;
+}
+
+
+/*
+   Draw the selected border slightly INSIDE
+   the button so overflow:hidden cannot clip it.
+*/
+.matchup-team.team-selected::after {
+    content: "";
+
+    position: absolute;
+
+    top: 2px;
+    right: 2px;
+    bottom: 2px;
+    left: 2px;
+
+    box-sizing: border-box;
+
+    border: 3px solid #0d6efd;
+
+    pointer-events: none;
+
+    z-index: 2;
+}
+
+
+/* Don't lose selected background on hover */
+.matchup-team.team-selected:not(:disabled):hover {
+    background-color: #e7f1ff;
+}
+
+
+/* =========================================
+   KEYBOARD FOCUS
+   ========================================= */
+
+.matchup-team:focus {
+    box-shadow: none;
+}
+
+.matchup-team:focus-visible {
+    outline: 3px solid #0d6efd;
+    outline-offset: -4px;
+}
+
+
+/* =========================================
+   UNAVAILABLE TEAM
+   ========================================= */
+
+.matchup-team.team-unavailable {
+    background-color: #f1f3f5;
+
+    opacity: 0.55;
+
+    cursor: not-allowed;
+}
+
+/* Make unavailable logos visually different */
+.matchup-team.team-unavailable .matchup-logo {
+    filter: grayscale(100%);
+}
+
+/* =========================================
+   INELIGIBLE TEAM
+   ========================================= */
+
+.matchup-team.team-ineligible {
+    background-color: #f1f3f5;
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.matchup-team.team-ineligible .matchup-logo {
+    filter: grayscale(100%);
+}
+
+
+/* =========================================
+   TEAM LOGO
+   ========================================= */
+
+.matchup-logo {
+    width: 64px;
+    height: 64px;
+
+    object-fit: contain;
+}
+
+
+/* =========================================
+   CONFERENCE NAVIGATION:
+   MATCHUP CARD HIGHLIGHT
+   ========================================= */
+
+.matchup-card.matchup-navigation-highlight {
+    animation: matchupNavigationHighlight 1.8s ease;
+}
+
+@keyframes matchupNavigationHighlight {
+
+    0% {
+        box-shadow: none;
+    }
+
+    20% {
+        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.3);
+    }
+
+    100% {
+        box-shadow: none;
+    }
+}
+
+
+/* =========================================
+   CONFERENCE NAVIGATION:
+   SPECIFIC TEAM HIGHLIGHT
+   ========================================= */
+
+.matchup-team.team-navigation-highlight {
+    animation: teamNavigationHighlight 1.8s ease;
+}
+
+@keyframes teamNavigationHighlight {
+
+    0% {
+        background-color: transparent;
+    }
+
+    20% {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+.back-to-top {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+
+    width: 48px;
+    height: 48px;
+
+    border-radius: 15%;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 22px;
+    font-weight: bold;
+
+    z-index: 1050;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.current-selection {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 12px;
+
+    border: 1px solid #0d6efd;
+    border-radius: 8px;
+
+    background-color: #e7f1ff;
+    color: #212529;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.current-selection:hover {
+    background-color: #d9eaff;
+    border-color: #0a58ca;
+}
+
+.current-selection-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+
+.pick-needed {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 8px 12px;
+
+    border: 1px dashed #adb5bd;
+    border-radius: 8px;
+
+    color: #6c757d;
+    background-color: #f8f9fa;
+}
+
+/* Toast Notification */
+.toast-container {
+    z-index: 1100;
+}
+
+.selection-toast {
+    background-color: #ffffff;
+    color: #212529;
+
+    border: 1px solid #dee2e6;
+    border-left: 5px solid #198754;
+
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+
+    opacity: 1;
+}
+
+.selection-toast .toast-header {
+    background-color: #ffffff;
+    color: #212529;
+
+    border-bottom: 1px solid #dee2e6;
+}
+
+.selection-toast .toast-body {
+    background-color: #ffffff;
+    color: #212529;
+
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+
 @media (max-width:768px) {
     .button-container {
         flex-direction: column;
@@ -271,5 +619,30 @@ nav a {
         width: 100%;
         display: block;
         margin-bottom: 20px;
+    }
+
+    .back-to-top {
+        right: 12px;
+        bottom: 12px;
+
+        width: 44px;
+        height: 44px;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+        top: 12px !important;
+        left: 12px !important;
+        right: 12px !important;
+
+        padding: 0 !important;
+
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    .selection-toast {
+        width: 100%;
+        max-width: none;
     }
 }

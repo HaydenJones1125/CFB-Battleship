@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>College Football Battleship</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link href="css/index.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/2.0.1/css/dataTables.dataTables.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/css/selectize.default.min.css" integrity="sha512-pTaEn+6gF1IeWv3W1+7X7eM60TFu/agjgoHmYhAfLEU8Phuf6JKiiE8YmsNC0aCgQv4192s4Vai8YZ6VNM6vyQ==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
@@ -53,6 +54,16 @@
                     <input id="txtLoginIdentifier" class="form-control" type="text" autocomplete="username">
                     <label for="txtLoginPassword" class="form-label mt-3">Password</label>
                     <input id="txtLoginPassword" class="form-control" type="password">
+                    <div class="form-check mt-2">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            id="chkRememberMe"
+                        >
+                        <label class="form-check-label" for="chkRememberMe">
+                            Remember me
+                        </label>
+                    </div>
                     <div class="d-flex justify-content-evenly mt-3 button-container">
                         <button id="btnLogin" class="btn btn-primary responsive-button" type="button">Login</button>
                         <button id="btnRegistration" class="btn btn-success responsive-button" type="button">Register</button>
@@ -272,11 +283,138 @@
 
         <!-- Make Picks Card -->
         <div id="divMakePicks" class="card col-12 text-black" style="display: none;">
-            <div class="d-flex card-header justify-content-center">
-                
+
+            <div class="card-header position-relative text-center">
+
+                <button
+                    type="button"
+                    id="btnBackFromMakePicks"
+                    class="btn btn-outline-secondary btn-sm position-absolute start-0 top-50 translate-middle-y ms-3"
+                >
+                    <i class="bi bi-arrow-left"></i>
+                    Back
+                </button>
+
+                <h3 class="mb-0">
+                    Make Picks
+                </h3>
+
             </div>
-            <div class="d-flex card-body justify-content-center" style="flex-direction: column;">
-                
+
+            <div class="card-body">
+
+                <!-- Current Selections -->
+                <div id="divCurrentSelections" class="mb-4">
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+
+                        <div>
+                            <h5 class="mb-1">Your Picks</h5>
+                            <p class="text-muted mb-0">
+                                Your current selections for this week.
+                            </p>
+                        </div>
+
+                        <span
+                            id="currentSelectionCount"
+                            class="badge text-bg-secondary"
+                        >
+                        </span>
+
+                    </div>
+
+                    <div
+                        id="currentSelectionList"
+                        class="d-flex flex-wrap gap-2"
+                    >
+                    </div>
+
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Conference Navigation -->
+                <div id="divConferenceNavigation" class="mb-4">
+
+                    <div class="mb-3">
+                        <h5 class="mb-1">Conferences</h5>
+
+                        <p class="text-muted mb-0">
+                            Select a team to jump to their matchup.
+                        </p>
+                    </div>
+
+                    <!-- Bootstrap Accordions Generated Here -->
+                    <div
+                        class="accordion"
+                        id="conferenceAccordions">
+                    </div>
+
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Matchup Section -->
+                <div id="divMatchups">
+
+                    <h5 class="mb-3">Matchups</h5>
+
+                    <p class="text-muted mb-0">Click a team to select for this week.</p>
+                    <p class="text-muted mb-4">Click a selected team to deselect it.</p>
+
+                    <!-- Matchup Cards Generated Here -->
+                    <div id="matchupCards">
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+        <button
+            id="btnBackToTop"
+            type="button"
+            class="btn btn-primary back-to-top"
+            aria-label="Back to top"
+            title="Back to top"
+        >
+            <i class="bi bi-arrow-up"></i>
+        </button>
+
+        <div
+            class="toast-container position-fixed top-0 end-0 p-3"
+            style="z-index: 1100;"
+        >
+            <div
+                id="selectionToast"
+                class="toast selection-toast"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+            >
+
+                <div class="toast-header">
+
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+
+                    <strong class="me-auto">
+                        Pick Updated
+                    </strong>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="toast"
+                        aria-label="Close"
+                    ></button>
+
+                </div>
+
+                <div
+                    id="selectionToastBody"
+                    class="toast-body"
+                ></div>
+
             </div>
         </div>
     </div>
@@ -294,6 +432,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/js/selectize.min.js" integrity="sha512-IOebNkvA/HZjMM7MxL0NYeLYEalloZ8ckak+NDtOViP7oiYzG5vn6WVXyrJDiJPhl4yRdmNAG49iuLmhkUdVsQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.print.min.js"></script>
     <script>
+        //const apiURL = 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net';
+        const apiURL = 'https://fort-portraits-memorial-toolbox.trycloudflare.com';
         // regex for email validation
         const regEmail = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/;
         
@@ -304,35 +444,42 @@
 
         /* Functions */
 
+        function getStoredSessionID() {
+            return sessionStorage.getItem('SessionID') ||
+                localStorage.getItem('SessionID');
+        }
+
         // Logout Function
         function logout() {
-            let strSessionID = sessionStorage.getItem('SessionID')
+            const strSessionID = getStoredSessionID();
+
             $.ajax({
-                url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/sessions?SessionID=' + strSessionID,
+                url: apiURL + '/sessions?SessionID=' + strSessionID,
                 type: 'DELETE',
-                success: function(){
+
+                success: function () {
                     sessionStorage.removeItem('SessionID');
+                    localStorage.removeItem('SessionID');
+
                     userID = '';
-                    // Slide up the current card (if it's not already hidden)
-                    $('.card:visible').slideUp(function(){
-                        // Slide down the dashboard card
-                        $('#divAbout').slideDown(function(){
-                            location.reload();
-                        });
+
+                    $('.card:visible').slideToggle(function () {
+                        location.reload();
                     });
                 },
-                error: function(){
+
+                error: function () {
+                    // Still clear the local session even if the backend request fails
                     sessionStorage.removeItem('SessionID');
+                    localStorage.removeItem('SessionID');
+
                     userID = '';
-                    // Slide up the current card (if it's not already hidden)
-                    $('.card:visible').slideUp(function(){
-                        // Slide down the dashboard card
-                        $('#divAbout').slideDown(function(){
-                            location.reload();
-                        });
+
+                    $('.card:visible').slideToggle(function () {
+                        location.reload();
                     });
                 }
-            })
+            });
         }
 
         // Function to convert ISO string to local 12 hour time
@@ -369,22 +516,30 @@
 
         // getUserID to assign to global variable
         function getUserID(callback) {
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/userID?SessionID=' + sessionStorage.getItem('SessionID'), function(result){
-                    if(result.message == "success") {
-                    callback(result.userID)
+            const sessionID = getStoredSessionID();
+
+            $.get(apiURL + '/userID?SessionID=' + sessionID, function(result) {
+                if (result.message == "success") {
+                    callback(result.userID);
                 } else {
+                    sessionStorage.removeItem('SessionID');
+                    localStorage.removeItem('SessionID');
+
                     Swal.fire({
-                        title: "Oops",
-                        text: "SessionID is invalid, Please signout then re-login"
-                    })
+                        title: "Session Expired",
+                        text: "Please log in again.",
+                        icon: "info"
+                    }).then(() => {
+                        location.reload();
+                    });
                 }
-            })
+            });
         }
 
         // Function to get all groups
         function getGroups() {
             return new Promise((resolve, reject) => {
-                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groups', function(groups) {
+                $.get(apiURL + '/groups', function(groups) {
                     if (groups) {
                         resolve(groups);
                     } else {
@@ -440,7 +595,7 @@
         // Get the groups that the user is a part of
         function getYourGroups() {
             return new Promise((resolve, reject) => {
-                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupsByUserID?userID=' + userID, function(result) {
+                $.get(apiURL + '/groupsByUserID?userID=' + userID, function(result) {
                     if (result) {
                         resolve(result);
                     } else {
@@ -532,8 +687,8 @@
                 $('#divGroupMembers').html(strHTML);
 
                 // Fetch picks left and last lost week for the whole group
-                const picksLeftResponse = await $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupPicksLeft?groupID=' + groupID);
-                const lastLostWeekResponse = await $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/lastLostWeek?groupID=' + groupID);
+                const picksLeftResponse = await $.get(apiURL + '/groupPicksLeft?groupID=' + groupID);
+                const lastLostWeekResponse = await $.get(apiURL + '/lastLostWeek?groupID=' + groupID);
 
                 // Create dictionaries for easy lookup by UserID
                 const picksLeftMap = {};
@@ -664,36 +819,47 @@
         /* End Functions */
 
         // When the document is ready load everything needed
-        $(document).ready(function(){
+        $(document).ready(function () {
             displayGroupsTable();
-            if (sessionStorage.getItem('SessionID')) {
-                // get userID
-                getUserID(function(result){
-                    // set global userID
+
+            const sessionID = getStoredSessionID();
+
+            if (sessionID) {
+                getUserID(function (result) {
                     userID = result;
+
                     displayPicksGroups();
                     displayYourGroups();
                 });
+
                 $('#divDashboard').slideToggle();
-            } else if (!sessionStorage.getItem('SessionID')) {
+            } else {
                 $('#divAbout').slideToggle();
             }
-        })
+        });
 
         //login the user
         // Login the user
         $('#btnLogin').on('click', function () {
-            const strIdentifier = $('#txtLoginIdentifier').val().trim();
-            const strPassword = $('#txtLoginPassword').val();
+            const strIdentifier =
+                $('#txtLoginIdentifier').val().trim();
+
+            const strPassword =
+                $('#txtLoginPassword').val();
+
+            const rememberMe =
+                $('#chkRememberMe').is(':checked');
 
             let strErrorMessage = '';
 
             if (strIdentifier.length < 1) {
-                strErrorMessage += 'Email or username cannot be blank. ';
+                strErrorMessage +=
+                    'Email or username cannot be blank. ';
             }
 
             if (strPassword.length < 1) {
-                strErrorMessage += 'Password cannot be blank.';
+                strErrorMessage +=
+                    'Password cannot be blank.';
             }
 
             if (strErrorMessage) {
@@ -705,60 +871,47 @@
             }
 
             $.ajax({
-                url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/login',
+                url: apiURL + '/login',
                 method: 'POST',
-                contentType: 'application/x-www-form-urlencoded',
+                contentType:
+                    'application/x-www-form-urlencoded',
+
                 data: {
                     identifier: strIdentifier,
-                    password: strPassword
+                    password: strPassword,
+                    rememberMe: rememberMe
                 },
 
                 success: function (loginResult) {
                     userID = loginResult.userID;
 
-                    // Use the actual email returned by /login.
-                    // This is important when the user logged in with a username.
-                    $.post(
-                        'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/sessions',
-                        {
-                            email: loginResult.email,
-                            password: strPassword
-                        },
-                        function (sessionResult) {
-                            if (sessionResult.Error) {
-                                return Swal.fire({
-                                    title: 'Oops',
-                                    text: sessionResult.Error,
-                                    icon: 'error'
-                                });
-                            }
+                    if (rememberMe) {
+                        localStorage.setItem(
+                            'SessionID',
+                            loginResult.sessionid
+                        );
 
-                            sessionStorage.setItem(
-                                'SessionID',
-                                sessionResult.sessionid
-                            );
+                        sessionStorage.removeItem('SessionID');
+                    } else {
+                        sessionStorage.setItem(
+                            'SessionID',
+                            loginResult.sessionid
+                        );
 
-                            displayPicksGroups();
-                            displayYourGroups();
+                        localStorage.removeItem('SessionID');
+                    }
 
-                            Swal.fire({
-                                title: 'Success',
-                                text: 'Login successful.',
-                                icon: 'success'
-                            });
+                    displayPicksGroups();
+                    displayYourGroups();
 
-                            $('#divLogin').slideToggle(function () {
-                                $('#divDashboard').slideToggle();
-                            });
-                        }
-                    ).fail(function (xhr) {
-                        Swal.fire({
-                            title: 'Oops',
-                            text:
-                                xhr.responseJSON?.error ||
-                                'The session could not be created.',
-                            icon: 'error'
-                        });
+                    Swal.fire({
+                        title: 'Success',
+                        text: 'Login successful.',
+                        icon: 'success'
+                    });
+
+                    $('#divLogin').slideToggle(function () {
+                        $('#divDashboard').slideToggle();
                     });
                 },
 
@@ -790,8 +943,7 @@
 
             // Send email to backend to trigger password reset link
             $.ajax({
-                url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/forgotPassword',
-                //url: 'http://localhost:8080/forgotPassword',
+                url: apiURL + '/forgotPassword',
                 type: 'POST',
                 data: { email: strEmail },
                 success: function (result) {
@@ -813,118 +965,118 @@
         
         // Register User
         $('#btnRegister').on('click', async function () {
-  const strFirstName = $('#txtRegisterFirstName').val() || '';
-  const strLastName = $('#txtRegisterLastName').val() || '';
-  const strUsername = $('#txtRegisterUsername').val() || '';
-  const strEmail = $('#txtRegisterEmail').val() || '';
-  const strPassword = $('#txtRegisterPassword').val() || '';
-  const strConfirmPassword = $('#txtConfirmPassword').val() || '';
+            const strFirstName = $('#txtRegisterFirstName').val() || '';
+            const strLastName = $('#txtRegisterLastName').val() || '';
+            const strUsername = $('#txtRegisterUsername').val() || '';
+            const strEmail = $('#txtRegisterEmail').val() || '';
+            const strPassword = $('#txtRegisterPassword').val() || '';
+            const strConfirmPassword = $('#txtConfirmPassword').val() || '';
 
-  let strError = '';
+            let strError = '';
 
-  // Password match check
-  if (strPassword !== strConfirmPassword) {
-    return Swal.fire({
-      title: "Passwords Do Not Match",
-      text: "Passwords do not match, please try again",
-      icon: "error"
-    });
-  }
-
-  // Input validation (use length checks, not numeric)
-  let blnError = false;
-  if (strFirstName.trim().length < 1) { blnError = true; strError += 'First name cannot be blank.  '; }
-  if (strLastName.trim().length < 1)  { blnError = true; strError += 'Last name cannot be blank.  '; }
-  if (strUsername.trim().length < 1)  { blnError = true; strError += 'Username cannot be blank.  '; } // fixed message
-  if (!regEmail.test(strEmail))       { blnError = true; strError += 'Invalid Email Format.  '; }
-  if (strPassword.trim().length < 1)  { blnError = true; strError += 'Password cannot be blank.  '; }
-
-  if (blnError) {
-    return Swal.fire({ icon: 'error', title: 'Uh oh!', text: strError });
-  }
-
-  // Helper to send x-www-form-urlencoded
-  const toForm = (obj) => new URLSearchParams(obj).toString();
-
-  try {
-    // Register user
-    const resUsers = await fetch(
-        'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/users',
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: toForm({
-                firstName: strFirstName,
-                lastName: strLastName,
-                username: strUsername,
-                email: strEmail,
-                password: strPassword
-            })
-        }
-    );
-
-    const dataUsers = await resUsers.json().catch(() => ({}));
-
-    if (!resUsers.ok) {
-        if (resUsers.status === 409) {
-            const errors = [];
-
-            if (dataUsers.errors?.username) {
-                errors.push(dataUsers.errors.username);
+            // Password match check
+            if (strPassword !== strConfirmPassword) {
+                return Swal.fire({
+                title: "Passwords Do Not Match",
+                text: "Passwords do not match, please try again",
+                icon: "error"
+                });
             }
 
-            if (dataUsers.errors?.email) {
-                errors.push(dataUsers.errors.email);
+            // Input validation (use length checks, not numeric)
+            let blnError = false;
+            if (strFirstName.trim().length < 1) { blnError = true; strError += 'First name cannot be blank.  '; }
+            if (strLastName.trim().length < 1)  { blnError = true; strError += 'Last name cannot be blank.  '; }
+            if (strUsername.trim().length < 1)  { blnError = true; strError += 'Username cannot be blank.  '; } // fixed message
+            if (!regEmail.test(strEmail))       { blnError = true; strError += 'Invalid Email Format.  '; }
+            if (strPassword.trim().length < 1)  { blnError = true; strError += 'Password cannot be blank.  '; }
+
+            if (blnError) {
+                return Swal.fire({ icon: 'error', title: 'Uh oh!', text: strError });
             }
 
-            if (dataUsers.errors?.account) {
-                errors.push(dataUsers.errors.account);
-            }
+            // Helper to send x-www-form-urlencoded
+            const toForm = (obj) => new URLSearchParams(obj).toString();
 
-            return Swal.fire({
-                title: 'Registration Error',
-                html: errors.length
-                    ? errors.map(error => `<div>${error}</div>`).join('')
-                    : 'Username or email is already in use.',
-                icon: 'error'
+            try {
+                // Register user
+                const resUsers = await fetch(
+                    apiURL + '/users',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: toForm({
+                            firstName: strFirstName,
+                            lastName: strLastName,
+                            username: strUsername,
+                            email: strEmail,
+                            password: strPassword
+                        })
+                    }
+                );
+
+                const dataUsers = await resUsers.json().catch(() => ({}));
+
+                if (!resUsers.ok) {
+                    if (resUsers.status === 409) {
+                        const errors = [];
+
+                        if (dataUsers.errors?.username) {
+                            errors.push(dataUsers.errors.username);
+                        }
+
+                        if (dataUsers.errors?.email) {
+                            errors.push(dataUsers.errors.email);
+                        }
+
+                        if (dataUsers.errors?.account) {
+                            errors.push(dataUsers.errors.account);
+                        }
+
+                        return Swal.fire({
+                            title: 'Registration Error',
+                            html: errors.length
+                                ? errors.map(error => `<div>${error}</div>`).join('')
+                                : 'Username or email is already in use.',
+                            icon: 'error'
+                        });
+                    }
+
+                    return Swal.fire({
+                        title: 'Error',
+                        text: dataUsers.message || 'Could not create user.',
+                        icon: 'error'
+                    });
+                }
+
+                const userID = dataUsers.userID; // if you need it later
+
+                // 2) Create session (login)
+                const resSess = await fetch(apiURL + '/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: toForm({ email: strEmail, password: strPassword })
+                });
+
+                const dataSess = await resSess.json().catch(() => ({}));
+
+                if (!resSess.ok || dataSess.Error) {
+                const msg = dataSess.Error || dataSess.error || 'Could not create session.';
+                return Swal.fire({ title: "Login Error", text: msg, icon: "error" });
+                }
+
+                // Success
+                sessionStorage.setItem('SessionID', dataSess.sessionid);
+                await Swal.fire({ title: "Success", text: "User and Session Created", icon: "success" });
+                $('#divRegister').slideToggle(function () { $('#divDashboard').slideToggle(); });
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire({ title: "Network Error", text: err.message || 'Something went wrong.', icon: "error" });
+            }
             });
-        }
-
-        return Swal.fire({
-            title: 'Error',
-            text: dataUsers.message || 'Could not create user.',
-            icon: 'error'
-        });
-    }
-
-    const userID = dataUsers.userID; // if you need it later
-
-    // 2) Create session (login)
-    const resSess = await fetch('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: toForm({ email: strEmail, password: strPassword })
-    });
-
-    const dataSess = await resSess.json().catch(() => ({}));
-
-    if (!resSess.ok || dataSess.Error) {
-      const msg = dataSess.Error || dataSess.error || 'Could not create session.';
-      return Swal.fire({ title: "Login Error", text: msg, icon: "error" });
-    }
-
-    // Success
-    sessionStorage.setItem('SessionID', dataSess.sessionid);
-    await Swal.fire({ title: "Success", text: "User and Session Created", icon: "success" });
-    $('#divRegister').slideToggle(function () { $('#divDashboard').slideToggle(); });
-
-  } catch (err) {
-    console.error(err);
-    Swal.fire({ title: "Network Error", text: err.message || 'Something went wrong.', icon: "error" });
-  }
-});
 
         //logout the user
         $('#btnNavLogout').on('click', function(){
@@ -995,7 +1147,7 @@
             e.preventDefault(); // Prevent the default link behavior
 
             // check if logged in
-            if (sessionStorage.getItem('SessionID')) {
+            if (getStoredSessionID()) {
                 // Slide up the current card (if it's not already hidden)
                 $('.card:visible').slideUp(function(){
                     // Slide down the dashboard card
@@ -1047,7 +1199,7 @@
 
         // Go to login from anywhere
         $('#navLogin').on('click', function(e){
-            if (!sessionStorage.getItem('SessionID')) {
+            if (!getStoredSessionID()) {
                 e.preventDefault(); // Prevent the default link behavior
                 // Slide up the current card (if it's not already hidden)
                 $('.card:visible').slideUp(function(){
@@ -1079,7 +1231,7 @@
 
         // Go to signup from anywhere
         $('#navSignup').on('click', function(e){
-            if (!sessionStorage.getItem('SessionID')) {
+            if (!getStoredSessionID()) {
                 e.preventDefault(); // Prevent the default link behavior
                 // Slide up the current card (if it's not already hidden)
                 $('.card:visible').slideUp(function(){
@@ -1115,7 +1267,7 @@
         // Functionality for create new group using a sweet alert
         $('#btnNewGroup').on('click', function(){
             // check if user is logged in
-            if (!sessionStorage.getItem('SessionID')) {
+            if (!getStoredSessionID()) {
                 Swal.fire({
                     title: "Not Logged In",
                     text: "You must be logged in to create a new group",
@@ -1178,8 +1330,8 @@
                                 password: strGroupPassword
                             }
 
-                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groups', formData, function(result){
-                                $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers', {groupID:result.groupID, groupName:result.groupName, userID:userID, groupPassword:strGroupPassword}, function(res){
+                            $.post(apiURL + '/groups', formData, function(result){
+                                $.post(apiURL + '/groupmembers', {groupID:result.groupID, groupName:result.groupName, userID:userID, groupPassword:strGroupPassword}, function(res){
                                     if (!password.value) {
                                         Swal.fire({
                                             title: 'Group Created',
@@ -1192,10 +1344,10 @@
                                             week: 1,
                                             picksLeft: 7
                                         };
-                                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=' + result.groupID, function(groupMembers){
+                                        $.get(apiURL + '/groupmembers?groupID=' + result.groupID, function(groupMembers){
                                             let arrMembers = groupMembers.members;
                                             let numMembers = arrMembers.length;
-                                            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupOwner?groupID=' + result.groupID, function(owner){
+                                            $.get(apiURL + '/groupOwner?groupID=' + result.groupID, function(owner){
                                                 addGroupRow(result.groupName, owner.owner, numMembers);
                                                 addYourGroupRow(result.groupName, owner.owner, numMembers);
                                                 addToPicksGroups(result.groupName, owner.owner);
@@ -1213,7 +1365,7 @@
                                     groupID: result.groupID,
                                     userID: userID
                                 }
-                                $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft', postData, function(res){
+                                $.post(apiURL + '/picksLeft', postData, function(res){
                                 })
                             });                           
                         })
@@ -1229,7 +1381,7 @@
             let strNumMembers = $(this).find('td').eq(2).text();
             let strGroupID = $(this).attr('data-value');
             // Get first game to check if season has started
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/firstGame', function(game){
+            $.get(apiURL + '/firstGame', function(game){
                 // Add 6 days to the first game to allow people to join late
                 let gameStartTime = game.startDate;
                 gameStartTime = new Date(gameStartTime);
@@ -1244,7 +1396,7 @@
                         icon: 'warning'
                     });
                     return;
-                } else if (!sessionStorage.getItem('SessionID')) {
+                } else if (!getStoredSessionID()) {
                     Swal.fire({
                         title: 'Not Logged In',
                         text: 'You must be logged in to join a group!',
@@ -1253,7 +1405,7 @@
                     return;
                 } else {
                     // Get groupMembers to check if user is in group
-                    $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=' + strGroupID, function(result){
+                    $.get(apiURL + '/groupmembers?groupID=' + strGroupID, function(result){
                         let arrMembers = result.members;
                         let blnUserInGroup = false;
                         arrMembers.forEach((member) => {
@@ -1277,7 +1429,7 @@
                             }).then((result) => {
                                 if (result.isConfirmed) {
                                     // Check if group has password (if password in sql table is blank then no password), if so, ask for password (validate password using backend), otherwise join
-                                    $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupByID?groupID=' + strGroupID, function(result){
+                                    $.get(apiURL + '/groupByID?groupID=' + strGroupID, function(result){
                                         if (result.Password) {
                                             Swal.fire({
                                                 title: 'Enter Group Password',
@@ -1292,7 +1444,7 @@
                                                 }
                                             }).then((input) => {
                                                 if (input.isConfirmed) {
-                                                    $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:input.value}, function(res){
+                                                    $.post(apiURL + '/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:input.value}, function(res){
                                                         if (!res.error) {
                                                             Swal.fire({
                                                                 title: 'Group Joined',
@@ -1305,7 +1457,7 @@
                                                                 groupID: strGroupID,
                                                                 userID: userID
                                                             }
-                                                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft', postData, function(res){
+                                                            $.post(apiURL + '/picksLeft', postData, function(res){
                                                             })
                                                         } else {
                                                             Swal.fire({
@@ -1318,7 +1470,7 @@
                                                 }
                                             })
                                         } else {
-                                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:''}, function(res){
+                                            $.post(apiURL + '/groupmembers', {groupID:strGroupID, groupName:strGroupName, userID:userID, groupPassword:''}, function(res){
                                                 if (res) {
                                                     Swal.fire({
                                                         title: 'Group Joined',
@@ -1331,7 +1483,7 @@
                                                         groupID: strGroupID,
                                                         userID: userID
                                                     }
-                                                    $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft', postData, function(res){
+                                                    $.post(apiURL + '/picksLeft', postData, function(res){
                                                     })
                                                 } else {
                                                     Swal.fire({
@@ -1437,17 +1589,17 @@
             })
 
             // Get numPicks for the selected user
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/allPicksLeft?userID=' + strUserID + '&groupID=' + strGroupID, function(result){
+            $.get(apiURL + '/allPicksLeft?userID=' + strUserID + '&groupID=' + strGroupID, function(result){
                 displayPicksPerWeek(result.picksLeft);
             }); 
 
             // Get current week for displaying a user's picks (get week then subtract 1 so that you can't see this week's picks)
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/weekNumber', function(weekNum){
+            $.get(apiURL + '/weekNumber', function(weekNum){
                 let intWeekNumber = weekNum.weekNumber;
                 week = intWeekNumber - 1;
 
                 // Get the picks for the selected player (needs groupID and userID)
-                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selections?groupID=' + strGroupID + '&userID=' + strUserID, function(result){
+                $.get(apiURL + '/selection?groupID=' + strGroupID + '&userID=' + strUserID, function(result){
                     let picks = result.selections;
                     for (let i = 1; i <= week; i++) {
                         createPicksCards(i, function(){
@@ -1472,70 +1624,861 @@
         
         // Function to display the teams that the user has not yet picked
         // Change code so year updates automatically
-        function displayValidPicks() {
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/year', function(result){
-                let year = result.year;
-                $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/teams?year=${year}`, function(teams){
-                    let arrValidTeams = [];
-                    
-                    // Get all fbs teams and add them to arrValidTeams
-                    let promise1 = new Promise((resolve, reject) => {
-                        teams.forEach((team, index, array) => {
-                            arrValidTeams.push(team.school);
-                            if (index === array.length - 1) resolve();
-                        });
-                    })
+        
+        /*
+            (New) Functions for make picks card
+        */
 
-                    promise1.then(() => {
-                        // Get all the teams that the user has already picked
-                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selections?groupID=' + groupID + '&userID=' + userID, function(alreadyPicked){
-                            let arrAlreadyPicked = [];
-
-                            // add all the teams that the user has already picked to arrAlreadyPicked
-                            let promise2 = new Promise((resolve, reject) => {
-                                if (alreadyPicked.selections.length < 1) {
-                                    resolve();
-                                } else {
-                                    alreadyPicked.selections.forEach((pick, index, array) => {
-                                        arrAlreadyPicked.push(pick.PickedTeam.split(' {')[0]);
-                                        if (index === array.length - 1) resolve();
-                                    })
-                                }
-                            })
-
-                            // Once all the teams have been added to arrAlreadyPicked, remove them from arrValidTeams
-                            promise2.then(() => {
-                                // Remove all the teams that the user has already picked from arrValidTeams
-                                let promise3 = new Promise((resolve, reject) => {
-                                    if(arrAlreadyPicked.length < 1) {
-                                        resolve();
-                                    } else {
-                                        arrAlreadyPicked.forEach((team, index, array) => {
-                                            let i = arrValidTeams.indexOf(team);
-                                            if (i > -1) {
-                                                arrValidTeams.splice(i, 1);
-                                            }
-                                            if (index === array.length - 1) resolve();
-                                        })
-                                    }
-                                })
-
-                                // Once all the teams have been removed from arrValidTeams, display the teams in the card
-                                promise3.then(() => {
-                                    arrValidTeams.forEach((team) => {
-                                        let strHTML = `<li id="${team}">${team}</li>`;
-                                        $('#divMakePicks .scrollable ol').append(strHTML);
-                                    })
-                                })
-                            })
-                        })
-                    });
+        // Function to get the teams for the current year
+        async function getTeams() {
+            let formattedTeams = [];
+            const yearResult = await $.get(apiURL + '/year');
+            const year = yearResult.year;
+            const teamsResult = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/teams?year=${year}`);
+            teamsResult.forEach(team => {
+                formattedTeams.push({
+                    id: team.id,
+                    school: team.school,
+                    abbreviation: team.abbreviation,
+                    conference: team.conference,
+                    logo: team.logos[8] || team.logos[0], // Use the 8th logo if available, otherwise use the first logo
+                    color: team.color,
+                    alternateColor: team.alternateColor
                 })
             })
+            return formattedTeams;
+        }
+
+        // Function to group teams by conference then sort conferences alphabetically and sort teams within each conference alphabetically
+        function groupTeamsByConference(teams) {
+            const conferences = {};
+
+            teams.forEach(team => {
+                const conferenceName = team.conference;
+                
+                    if (!conferences[conferenceName]) {
+                    conferences[conferenceName] = [];
+                }
+
+                conferences[conferenceName].push(team);
+            })
+
+            // Sort conferences alphabetically
+            const sortedConferences = Object.keys(conferences).sort().reduce((acc, conference) => {
+                acc[conference] = conferences[conference].sort((a, b) => a.school.localeCompare(b.school));
+                return acc;
+            }, {});
+
+            return sortedConferences;
+        }
+
+        function renderConferenceAccordions(
+            conferences,
+            invalidPicks,
+            currentWeekSelections
+        ) {
+            const accordionContainer =
+                $('#conferenceAccordions');
+
+            accordionContainer.empty();
+
+            /*
+                Teams used in previous weeks.
+            */
+            const invalidPickSet =
+                new Set(invalidPicks);
+
+            /*
+                Current-week selections now contain:
+                {
+                    teamName,
+                    gameID
+                }
+
+                The accordion only needs the team name.
+            */
+            const currentPickSet =
+                new Set(
+                    currentWeekSelections.map(
+                        selection => selection.teamName
+                    )
+                );
+
+            Object.entries(conferences)
+                .forEach(([conferenceName, teams], index) => {
+
+                    const conferenceID =
+                        `conference-${index}`;
+
+                    const teamButtons =
+                        teams.map(team => {
+
+                            const logo =
+                                team.logo ?? '';
+
+                            const wasPreviouslyUsed =
+                                invalidPickSet.has(
+                                    team.school
+                                );
+
+                            const isSelected =
+                                currentPickSet.has(
+                                    team.school
+                                );
+
+                            let teamClass =
+                                'btn-outline-secondary';
+
+                            let statusHTML = '';
+
+                            /*
+                                Previously used
+                            */
+                            if (wasPreviouslyUsed) {
+
+                                teamClass =
+                                    'conference-team-unavailable';
+
+                                statusHTML = `
+                                    <span
+                                        class="badge text-bg-secondary ms-auto"
+                                    >
+                                        Used
+                                    </span>
+                                `;
+
+                            /*
+                                Currently selected
+                            */
+                            } else if (isSelected) {
+
+                                teamClass =
+                                    'conference-team-selected';
+
+                                statusHTML = `
+                                    <i
+                                        class="bi bi-check-circle-fill text-primary ms-auto"
+                                        title="Selected this week"
+                                    ></i>
+                                `;
+                            }
+
+                            return `
+                                <div class="col-6 col-md-4 col-lg-3">
+
+                                    <button
+                                        type="button"
+
+                                        class="
+                                            btn
+                                            w-100
+                                            conference-team
+                                            d-flex
+                                            align-items-center
+                                            gap-2
+                                            ${teamClass}
+                                        "
+
+                                        data-team="${team.school}"
+                                        data-team-id="${team.id}"
+                                        data-available="${
+                                            !wasPreviouslyUsed
+                                        }"
+                                    >
+
+                                        ${
+                                            logo
+                                                ? `
+                                                    <img
+                                                        src="${logo}"
+                                                        alt=""
+                                                        class="conference-team-logo"
+                                                    >
+                                                `
+                                                : ''
+                                        }
+
+                                        <span
+                                            class="conference-team-name text-start"
+                                        >
+                                            ${team.school}
+                                        </span>
+
+                                        ${statusHTML}
+
+                                    </button>
+
+                                </div>
+                            `;
+                        })
+                        .join('');
+
+                    accordionContainer.append(`
+                        <div class="accordion-item">
+
+                            <h2
+                                class="accordion-header"
+                                id="heading-${conferenceID}"
+                            >
+
+                                <button
+                                    class="accordion-button collapsed"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapse-${conferenceID}"
+                                    aria-expanded="false"
+                                    aria-controls="collapse-${conferenceID}"
+                                >
+
+                                    <div
+                                        class="d-flex justify-content-between align-items-center w-100 me-2"
+                                    >
+
+                                        <span>
+                                            ${conferenceName}
+                                        </span>
+
+                                        <small class="text-muted">
+                                            ${teams.length} teams
+                                        </small>
+
+                                    </div>
+
+                                </button>
+
+                            </h2>
+
+                            <div
+                                id="collapse-${conferenceID}"
+                                class="accordion-collapse collapse"
+                                aria-labelledby="heading-${conferenceID}"
+                                data-bs-parent="#conferenceAccordions"
+                            >
+
+                                <div class="accordion-body">
+
+                                    <div class="row g-2">
+                                        ${teamButtons}
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    `);
+                });
         }
         
-        // Displays the make picks card with needed information
-        $(document).on('click', '#tblPicksGroups tbody tr', function(){
+        // Get the games data for the current week
+        async function getGamesData() {
+            const result = await $.get(apiURL + '/weekData');
+
+            const gamesData = result.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+            return gamesData;
+        }
+
+        // Get the teams that the user has already picked
+        async function getInvalidPicks(week) {
+            const result = await $.get(
+                apiURL + '/selection?groupID=' +
+                groupID +
+                '&userID=' +
+                userID
+            );
+
+            const invalidPicks = [];
+            const currentWeekSelections = [];
+
+            result.selections.forEach(pick => {
+
+                const teamName =
+                    pick.PickedTeam.split(" {")[0];
+
+                if (
+                    Number(pick.Week) <
+                    Number(week)
+                ) {
+
+                    // Historical picks only need the team name.
+                    // The team can no longer be used at all.
+                    invalidPicks.push(teamName);
+
+                } else if (
+                    Number(pick.Week) ===
+                    Number(week)
+                ) {
+
+                    // Current picks need the specific game.
+                    currentWeekSelections.push({
+                        teamName: teamName,
+                        gameID: Number(pick.GameID)
+                    });
+                }
+            });
+
+            return {
+                invalidPicks,
+                currentWeekSelections
+            };
+        }
+
+        // Get the spreads for the current week
+        async function getSpreads() {
+            const result = await $.get(apiURL + '/weeklySpreads');
+            console.log(result.spreads);
+            return result.spreads;
+        }
+
+        // Get the logos for the current week
+        async function getLogos() {
+            const result = await $.get(apiURL + '/teamLogos');
+            console.log(result.teamLogos);
+            return result.teamLogos;
+        }
+
+        /*
+            Converts data into an object with  the following data:
+            {
+                gameID:         (number)
+                startDate:      (string)
+                homeTeam: {
+                    name:
+                    conference:
+                    logo:
+                    available: (boolean)
+                    selected: (boolean)
+                    isFBS: (boolean)
+                }
+                awayTeam: {
+                    name:
+                    conference:
+                    logo:
+                    available: (boolean)
+                    selected: (boolean)
+                    isFBS: (boolean)
+                }
+                spread: {
+                    favorite: (string) - the team that is favored
+                    value: (float) - the spread for the game
+                    provider: (string) - the provider of the spread (DraftKings)
+                }
+            }
+
+            Parameters:
+                gamesData:      (array of objects) - the data from the weekData endpoint
+                    -calls a function
+                    -contains: gameID (id), startDate, homeTeam, awayTeam, homeConference, awayConference
+                invalidPicks:   (array of strings) - the teams that the user has already picked (used for determining if a team is available to be picked)
+                    -calls a function
+                spreads:        (array of objects) - the spread data for the games
+                    -calls a function
+                logos:          () - the logo data for the teams
+                    -calls a function
+                
+        */
+        function prepareGameData(
+            gamesData,
+            invalidPicks,
+            currentWeekSelections,
+            spreads,
+            logos
+        ) {
+            let preparedGameData = [];
+
+            gamesData.forEach((game) => {
+                let gameData = {};
+                let homeTeam = {};
+                let awayTeam = {};
+
+                const spreadData = spreads.find(
+                    spread => spread.id === game.id
+                );
+
+                const draftKingsLine = spreadData?.lines?.find(
+                    line => line.provider === "DraftKings"
+                );
+
+                let favoriteTeam = null;
+                let spread = null;
+                let provider = null;
+
+                // Get DraftKings spread data if available
+                if (draftKingsLine) {
+                    provider = draftKingsLine.provider;
+
+                    const formattedSpread =
+                        draftKingsLine.formattedSpread;
+
+                    if (formattedSpread) {
+                        const lastSpace =
+                            formattedSpread.lastIndexOf(" ");
+
+                        favoriteTeam =
+                            formattedSpread.substring(
+                                0,
+                                lastSpace
+                            );
+
+                        spread = parseFloat(
+                            formattedSpread.substring(
+                                lastSpace + 1
+                            )
+                        );
+                    }
+                }
+
+                const homeLogo =
+                    logos[game.homeTeam.toLowerCase()];
+
+                const awayLogo =
+                    logos[game.awayTeam.toLowerCase()];
+
+                // Previously used teams
+                const homeTeamAvailable =
+                    !invalidPicks.includes(game.homeTeam);
+
+                const awayTeamAvailable =
+                    !invalidPicks.includes(game.awayTeam);
+
+                // Current week selections
+                const homeTeamSelected =
+                    currentWeekSelections.some(selection =>
+                        selection.gameID === Number(game.id) &&
+                        selection.teamName === game.homeTeam
+                    );
+
+                const awayTeamSelected =
+                    currentWeekSelections.some(selection =>
+                        selection.gameID === Number(game.id) &&
+                        selection.teamName === game.awayTeam
+                    );
+
+                // Determine if the home and away teams are FBS
+                const homeTeamIsFBS =
+                    game.homeClassification?.toLowerCase() === 'fbs';
+
+                const awayTeamIsFBS =
+                    game.awayClassification?.toLowerCase() === 'fbs';
+
+                homeTeam = {
+                    name: game.homeTeam,
+                    conference: game.homeConference,
+                    logo: homeLogo,
+                    available: homeTeamAvailable,
+                    selected: homeTeamSelected,
+                    isFBS: homeTeamIsFBS
+                };
+
+                awayTeam = {
+                    name: game.awayTeam,
+                    conference: game.awayConference,
+                    logo: awayLogo,
+                    available: awayTeamAvailable,
+                    selected: awayTeamSelected,
+                    isFBS: awayTeamIsFBS
+                };
+
+                gameData = {
+                    gameID: game.id,
+                    startDate: game.startDate,
+
+                    homeTeam: homeTeam,
+                    awayTeam: awayTeam,
+
+                    spread: {
+                        favorite: favoriteTeam,
+                        value: spread,
+                        provider: provider
+                    }
+                };
+
+                preparedGameData.push(gameData);
+            });
+
+            return preparedGameData;
+        }
+
+        function updatePreparedGameSelection(
+            gameID,
+            teamName,
+            selected
+        ) {
+            const game =
+                preparedGameData.find(
+                    game =>
+                        Number(game.gameID) ===
+                        Number(gameID)
+                );
+
+            if (!game) {
+                return;
+            }
+
+            if (
+                game.awayTeam.name ===
+                teamName
+            ) {
+                game.awayTeam.selected =
+                    selected;
+            }
+
+            if (
+                game.homeTeam.name ===
+                teamName
+            ) {
+                game.homeTeam.selected =
+                    selected;
+            }
+        }
+
+        function formatGameDateTime(startDate) {
+            const date = new Date(startDate);
+
+            return date.toLocaleString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function renderCurrentSelections(
+            preparedGameData,
+            picksAllowed
+        ) {
+            const $container =
+                $('#currentSelectionList');
+
+            const $count =
+                $('#currentSelectionCount');
+
+            $container.empty();
+
+            const selectedTeams = [];
+
+            preparedGameData.forEach(game => {
+
+                if (game.awayTeam.selected) {
+                    selectedTeams.push({
+                        name: game.awayTeam.name,
+                        logo: game.awayTeam.logo,
+                        gameID: game.gameID
+                    });
+                }
+
+                if (game.homeTeam.selected) {
+                    selectedTeams.push({
+                        name: game.homeTeam.name,
+                        logo: game.homeTeam.logo,
+                        gameID: game.gameID
+                    });
+                }
+
+            });
+
+            console.log(selectedTeams);
+
+            /*
+                Update count
+            */
+            $count.text(
+                `${selectedTeams.length} of ${picksAllowed} selected`
+            );
+
+            /*
+                Render selected teams
+            */
+            selectedTeams.forEach(team => {
+
+                $container.append(`
+                    <button
+                        type="button"
+                        class="current-selection"
+                        data-team="${team.name}"
+                        data-game-id="${team.gameID}"
+                    >
+
+                        ${
+                            team.logo
+                                ? `
+                                    <img
+                                        src="${team.logo}"
+                                        alt=""
+                                        class="current-selection-logo"
+                                    >
+                                `
+                                : ''
+                        }
+
+                        <span>
+                            ${team.name}
+                        </span>
+
+                        <span class="text-primary">
+                            ✓
+                        </span>
+
+                    </button>
+                `);
+
+            });
+
+            /*
+                Render missing pick slots
+            */
+            const picksNeeded =
+                picksAllowed - selectedTeams.length;
+
+            for (
+                let i = 0;
+                i < picksNeeded;
+                i++
+            ) {
+
+                $container.append(`
+                    <div class="pick-needed">
+                        + Pick Needed
+                    </div>
+                `);
+
+            }
+        }
+
+        function renderMatchupCards(preparedGameData) {
+            const matchupContainer = $('#matchupCards');
+
+            matchupContainer.empty();
+
+            preparedGameData.forEach((game) => {
+                const formattedDateTime = formatGameDateTime(game.startDate);
+
+                const spreadText =
+                    game.spread?.favorite == null ||
+                    game.spread?.value == null
+                        ? 'No spread available'
+                        : `${game.spread.favorite} ${game.spread.value} (${game.spread.provider})`;
+
+                // Determine team states
+                const awayTeamClass = game.awayTeam.selected
+                    ? 'team-selected'
+                    : !game.awayTeam.isFBS
+                        ? 'team-ineligible'
+                        : game.awayTeam.available
+                            ? ''
+                            : 'team-unavailable';
+
+                const homeTeamClass = game.homeTeam.selected
+                    ? 'team-selected'
+                    : !game.homeTeam.isFBS
+                        ? 'team-ineligible'
+                        : game.homeTeam.available
+                            ? ''
+                            : 'team-unavailable';
+
+                const gameStarted =
+                    Date.now() >=
+                    new Date(game.startDate).getTime();
+
+                // Selected teams must remain clickable so they can be removed
+                const awayTeamDisabled =
+                    gameStarted ||
+                    (
+                        (
+                            !game.awayTeam.available ||
+                            !game.awayTeam.isFBS
+                        ) &&
+                        !game.awayTeam.selected
+                    );
+
+                const homeTeamDisabled =
+                    gameStarted ||
+                    (
+                        (
+                            !game.homeTeam.available ||
+                            !game.homeTeam.isFBS
+                        ) &&
+                        !game.homeTeam.selected
+                    );
+
+                matchupContainer.append(`
+                    <div 
+                        class="card matchup-card mb-3"
+                        id="game-${game.gameID}"
+                        data-game-id="${game.gameID}"
+                        data-away-team="${game.awayTeam.name}"
+                        data-home-team="${game.homeTeam.name}"
+                    >
+
+                        <!-- Date and Time -->
+                        <div class="card-header text-center">
+                            <strong>${formattedDateTime}</strong>
+                        </div>
+
+                        <!-- Teams -->
+                        <div class="card-body p-0">
+
+                            <div class="row g-0 m-0 matchup-team-row">
+
+                                <!-- Away Team -->
+                                <div class="col-6 p-0 d-flex border-end matchup-team-column">
+
+                                    <button 
+                                        type="button" 
+                                        class="
+                                            matchup-team 
+                                            btn 
+                                            flex-fill
+                                            rounded-0 
+                                            p-3 
+                                            ${awayTeamClass}
+                                        "
+                                        data-team="${game.awayTeam.name}"
+                                        data-game-id="${game.gameID}"
+                                        data-side="away"
+                                        ${awayTeamDisabled ? 'disabled' : ''}
+                                    >
+
+                                        <div class="small text-muted mb-2">
+                                            Away
+                                        </div>
+
+                                        <img
+                                            src="${game.awayTeam.logo}"
+                                            alt="${game.awayTeam.name} Logo"
+                                            class="matchup-logo mb-2"
+                                        >
+
+                                        <div class="fw-bold">
+                                            ${game.awayTeam.name}
+                                        </div>
+
+                                        <div class="small text-muted">
+                                            ${game.awayTeam.conference}
+                                        </div>
+
+                                        ${
+                                            !game.awayTeam.isFBS
+                                                ? `
+                                                    <div class="mt-2">
+                                                        <span class="badge text-bg-secondary">
+                                                            Non-FBS
+                                                        </span>
+                                                    </div>
+                                                `
+                                                : ''
+                                        }
+
+                                        <div class="selection-status mt-2">
+                                            ${
+                                                game.awayTeam.selected
+                                                    ? `
+                                                        <span class="badge text-bg-primary">
+                                                            Selected
+                                                        </span>
+                                                    `
+                                                    : ''
+                                            }
+                                        </div>
+
+                                    </button>
+
+                                </div>
+
+                                <!-- Home Team -->
+                                <div class="col-6 p-0 d-flex matchup-team-column">
+
+                                    <button 
+                                        type="button" 
+                                        class="
+                                            matchup-team 
+                                            btn 
+                                            flex-fill
+                                            rounded-0 
+                                            p-3 
+                                            ${homeTeamClass}
+                                        "
+                                        data-team="${game.homeTeam.name}"
+                                        data-game-id="${game.gameID}"
+                                        data-side="home"
+                                        ${homeTeamDisabled ? 'disabled' : ''}
+                                    >
+
+                                        <div class="small text-muted mb-2">
+                                            Home
+                                        </div>
+
+                                        <img
+                                            src="${game.homeTeam.logo}"
+                                            alt="${game.homeTeam.name} Logo"
+                                            class="matchup-logo mb-2"
+                                        >
+
+                                        <div class="fw-bold">
+                                            ${game.homeTeam.name}
+                                        </div>
+
+                                        <div class="small text-muted">
+                                            ${game.homeTeam.conference}
+                                        </div>
+
+                                        ${
+                                            !game.homeTeam.isFBS
+                                                ? `
+                                                    <div class="mt-2">
+                                                        <span class="badge text-bg-secondary">
+                                                            Non-FBS
+                                                        </span>
+                                                    </div>
+                                                `
+                                                : ''
+                                        }
+
+                                        <div class="selection-status mt-2">
+                                            ${
+                                                game.homeTeam.selected
+                                                    ? `
+                                                        <span class="badge text-bg-primary">
+                                                            Selected
+                                                        </span>
+                                                    `
+                                                    : ''
+                                            }
+                                        </div>
+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Spread -->
+                        <div class="card-footer text-center">
+                            <strong>${spreadText}</strong>
+                        </div>
+
+                    </div>
+                `);
+            });
+        }
+
+        function getPicksLeft(groupID, userID) {
+            return new Promise((resolve, reject) => {
+                $.get(apiURL + '/picksLeft?userID=' + userID + '&groupID=' + groupID, function(picksLeft){
+                    resolve(picksLeft.picksLeft);
+                }).fail(function() {
+                    reject(new Error('Failed to fetch picks left'));
+                });
+            });
+        }
+
+        let preparedGameData = [];
+        let picksAllowed = 0;
+
+        $(document).on('click', '#tblPicksGroups tbody tr', async function(){
             Swal.fire({
                 title: 'Loading',
                 text: 'Loading Picks Card',
@@ -1545,397 +2488,523 @@
                     Swal.showLoading();  // Show the loading animation
                 }
             });
+            // Get the groupID from the clicked row
             groupID = $(this).attr('data-value');
-            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/weekNumber', function(result){
-                let intWeekNumber = result.weekNumber;
-                week = intWeekNumber;
 
-                if (week == 16){
-                    week = 15;
-                }
+            //Get the current week for the user to make picks for
+            let weekResult = await $.get(apiURL + '/weekNumber');
+            week = weekResult.weekNumber;
 
-                let strHTML = '<h2>Make Picks for Week ' + intWeekNumber + '</h2>';
-                $('#divMakePicks .card-header').html(strHTML);
-                
-                strHTML =  `<div class="row2">
-                                <div class="columnYourGroups">
-                                    <div class="cardGroupsScrollable">
-                                        <div>
-                                            <h5>Teams Remaining to be Picked</h5>
-                                        </div>
-                                        <hr>
-                                        <div class="scrollable">
-                                            <ol style="list-style: none; padding: 0;">
-                                            </ol>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <hr>`;
-                $('#divMakePicks .card-body').html(strHTML);
-                displayValidPicks();
-                $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/weekData', function(result){
-                    $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/picksLeft?userID=' + userID + '&groupID=' + groupID, function(picksLeft){
-                        let numPicks = picksLeft.picksLeft;
-                        let gamesData = result.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+            // Retrive the number of picks left for the user in this group
+            picksAllowed = await getPicksLeft(groupID, userID);
+            console.log(picksAllowed);
 
-                        if (numPicks == 0) {
-                            strHTML = `<p class="text-center">You no longer have picks in this group</p>`;
-                            $('#divMakePicks .card-body').append(strHTML);
-                            strHTML =  `<div class="d-flex col-12 justify-content-evenly">
-                                            <button id="btnBackToPicks" type="button" class="btn btn-danger col-12">Go Back</button>
-                                        </div>`
-                            $('#divMakePicks .card-body').append(strHTML);
-                            $('#divDashboard').slideUp(function(){
-                                $('#divMakePicks').slideDown();
-                            })
-                        } else {
-                            strHTML =  `<div class="row"></div>`
-                            $('#divMakePicks .card-body').append(strHTML);
-                            for (let i = 1; i <= numPicks; i++){
-                                strHTML =  `<div class="columnPicks">
-                                                <div class="cardPicks">
-                                                    <h5>Pick ${i}</h5>
-                                                    <hr>
-                                                    <label for="selGames${i}" class="form-label mb-2">Select a Game:</label>
-                                                    <select id="selGames${i}" class="form-label">
-                                                        <option></option>
-                                                    </select>
-                                                    <label for"selTeams${i}" class="form-label mb-2">Select a Team:</label>
-                                                    <select id="selTeams${i}">
-                                                        <option></option>
-                                                    </select>
-                                                    <button id="btnMakePick${i}" type="button" class="btn btn-success col-12 mt-3 btn-make-pick">Confirm Pick</button>
-                                                    <button id="btnChangePick${i}" type="button" class="btn btn-warning col-12 mt-3 btn-change-pick">Change Pick</button>
-                                                </div>
-                                            </div>`
-                                $('#divMakePicks .card-body .row').append(strHTML)
-                            }
+            /*
+                Display the number of picks left for the user in this group with the teams already selected
+            */
 
-                            /*
-                                If user has made a pick in spot x, fill the game and team selectize boxes then disable the game and team selectize boxes, otherwise allow them to make a pick
-                            */
-                            $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selectionsByCurrentWeek?groupID=' + groupID + '&userID=' + userID, function(result){
-                                let arrAlreadyPicked = result.selections;
-                                for (let i = 1; i <= numPicks; i++){
-                                    
-                                    // Check if the user has already made a pick in this spot
-                                    let match = arrAlreadyPicked.find(pick => pick.PickNum == i);
-                                    if(match) {
-                                        gameID = match.GameID;
-                                        $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/gameData?gameID=' + gameID, function(result){
-                                            let strGameID = result[0].id;
-                                            // Fill selGames{i} with all games then select the one the user has already picked
-                                            let strHTML = "<option></option>";
+            /*
+                First we need to get the teams for the current year and split them into conferences to display on the top of the page 
+            */
+            // getTeams() returns an array of objects with the following data:
+            let teams = await getTeams();
+            let groupedConferences = await groupTeamsByConference(teams);
+            const pickData = await getInvalidPicks(week);
 
-                                            gamesData.forEach((game) => {
-                                                let gameStartTime = new Date(game.startDate);
-                                                let currentTime = new Date();
-    
-                                                // Only add the game to the Selectize options if it hasn't started yet or if the game is the one the user has already picked
-                                                if (gameStartTime > currentTime || strGameID == game.id) {
-                                                    let date = gameStartTime.toDateString();
-                                                    strHTML += '<option value="' + game.id + '">' + game.awayTeam + ' at ' + game.homeTeam + ' {' + date + ' ' + convertTo12HourFormat(game.startDate) + '}</option>';
-                                                }
-                                            });
-                                            $(`#selGames${i}`).html(strHTML).selectize({
-                                                placeholder: 'Select a game',
-                                                onChange: function(value) {
-                                                    // Get the selectize instance
-                                                    var selectizeInstance = $(`#selGames${i}`)[0].selectize;
-                                                    
-                                                    // Use getItem to retrieve the selected option's text
-                                                    var selectedOptionText = selectizeInstance.getItem(value).text();
+            renderConferenceAccordions(groupedConferences, pickData.invalidPicks, pickData.currentWeekSelections);
 
-                                                    // Split the text into away and home teams
-                                                    var teams = selectedOptionText.split(" at ");
-                                                    var awayTeam = teams[0] + ` {${gamesData.find(game => game.id == value).awayConference}}`;
-                                                    var homeTeam = teams[1].split(" {")[0] + ` {${gamesData.find(game => game.id == value).homeConference}}`;
+            /*
+                Next we need to get the games for the current week and display them in cards with the spreads and logos
+            */
+            // Prepare game data for the current week, including spreads and logos, and filter out already picked teams
 
-                                                    // Use the teams as needed, e.g., populating another selectize box
-                                                    var $teamSelect = $(`#selTeams${i}`).selectize();
-                                                    var control = $teamSelect[0].selectize;
-                                                    control.clear();
-                                                    control.clearOptions();
-                                                    control.addOption({ value: awayTeam, text: awayTeam });
-                                                    control.addOption({ value: homeTeam, text: homeTeam });
-                                                    control.refreshOptions(false); // Refresh options without triggering onChange
-                                                }
-                                            });
-                                            $(`#selTeams${i}`).selectize({
-                                                placeholder: 'Select a team',
-                                                sortField: 'text'
-                                            });
-                                            $(`#selGames${i}`).val(strGameID);
-                                            $(`#selTeams${i}`).val(match.PickedTeam);
+            games = await getGamesData();
 
-                                            // Disable the selectize boxes
-                                            var selectizeGame = $(`#selGames${i}`)[0].selectize;
-                                            selectizeGame.setValue(strGameID);
-                                            selectizeGame.disable();
-                                            var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
-                                            selectizeTeam.setValue(match.PickedTeam);
-                                            selectizeTeam.disable();
-                                        })
-                                    } else {
-                                        strHTML = "<option></option>";
-                                        gamesData.forEach((game) => {
-                                            let gameStartTime = new Date(game.startDate);
-                                            let currentTime = new Date();
+            preparedGameData = await prepareGameData(
+                await getGamesData(),
+                pickData.invalidPicks,
+                pickData.currentWeekSelections,
+                await getSpreads(),
+                await getLogos()
+            );
 
-                                            // Only add the game to the Selectize options if it hasn't started yet
-                                            if (gameStartTime > currentTime) {
-                                                let date = gameStartTime.toDateString();
-                                                strHTML += '<option value="' + game.id + '">' + game.awayTeam + ' at ' + game.homeTeam + ' {' + date + ' ' + convertTo12HourFormat(game.startDate) + '}</option>';
-                                            }
-                                        });
-                                        $(`#selGames${i}`).html(strHTML).selectize({
-                                            placeholder: 'Select a game',
-                                            onChange: function(value) {
-                                                // Get the selectize instance
-                                                var selectizeInstance = $(`#selGames${i}`)[0].selectize;
-                                                
-                                                // Use getItem to retrieve the selected option's text
-                                                var selectedOptionText = selectizeInstance.getItem(value).text();
-
-                                                // Split the text into away and home teams
-                                                var teams = selectedOptionText.split(" at ");
-                                                var awayTeam = teams[0] + ` {${gamesData.find(game => game.id == value).awayConference}}`;
-                                                var homeTeam = teams[1].split(" {")[0] + ` {${gamesData.find(game => game.id == value).homeConference}}`;
-
-                                                // Use the teams as needed, e.g., populating another selectize box
-                                                var $teamSelect = $(`#selTeams${i}`).selectize();
-                                                var control = $teamSelect[0].selectize;
-                                                control.clear();
-                                                control.clearOptions();
-                                                control.addOption({ value: awayTeam, text: awayTeam });
-                                                control.addOption({ value: homeTeam, text: homeTeam });
-                                                control.refreshOptions(false); // Refresh options without triggering onChange
-                                            }
-                                        });
-                                        $(`#selTeams${i}`).selectize({
-                                            placeholder: 'Select a team',
-                                            sortField: 'text'
-                                        });
-                                    }
-
-                                    
-                                }
-                                strHTML =  `<div class="d-flex col-12 justify-content-evenly">
-                                                <button id="btnBackToPicks" type="button" class="btn btn-danger col-12">Go Back</button>
-                                            </div>`
-                                $('#divMakePicks .card-body .row').append(strHTML);
-                                $('#divDashboard').slideUp(function(){
-                                    $('#divMakePicks').slideDown();
-                                    swal.close();
-                                })
-                            })
-                        }
-                    })
-                })
+            renderCurrentSelections(preparedGameData, picksAllowed);
+            renderMatchupCards(preparedGameData); 
+            
+            $('#divDashboard').slideUp(function(){
+                $('#divMakePicks').slideDown();
+                Swal.close();  // Close the loading animation
             })
-       })
+        });
 
-       // Go back to dashboard from make picks
-       $(document).on('click', '#btnBackToPicks', function(){
-            $('#divMakePicks').slideUp(function(){
-                $('#divDashboard').slideDown();
-            })
-       })
-       
-        // Submit one pick at a time, make sure the chosen team hasn't been picked already
-        $(document).on('click', '.btn-make-pick', function(){
-            Swal.fire({
-                title: 'Loading',
-                text: 'Loading Group Members Card',
-                icon: 'info',
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();  // Show the loading animation
+        /*
+            Functionality for clicking on a team from conference accordions to navigate to that team's matchup card
+                - First collapses accordion, then scrolls to matchup card, then highlights matchup card and team for 2 seconds
+        */
+        function navigateToTeamMatchup(teamName) {
+            let $targetCard = null;
+
+            $('.matchup-card').each(function () {
+                const awayTeam = $(this).data('away-team');
+                const homeTeam = $(this).data('home-team');
+
+                if (awayTeam === teamName || homeTeam === teamName) {
+                    $targetCard = $(this);
+                    return false;
                 }
             });
-            let buttonID = $(this).attr('id');
-            // Extract the number from the id (assuming format btnMakePicksX)
-            var i = buttonID.replace('btnMakePick', '');
-            
-            let strTimeStart = $(`#selGames${i}`).text().split(" {")[1].split("}")[0];
-            let gameTime = new Date(strTimeStart);
-            let currentTime = new Date();
-            if (gameTime < currentTime) {
-                Swal.fire({
-                    title: 'Game Already Started',
-                    text: 'This game has already started. Please select a different game.',
-                    icon: 'error'
+
+            if (!$targetCard) {
+                console.log(`${teamName} does not have a matchup this week.`);
+                return;
+            }
+
+            const $targetTeam = $targetCard
+                .find('.matchup-team')
+                .filter(function () {
+                    return $(this).data('team') === teamName;
                 });
-            } else {
-                let strGameID = $(`#selGames${i}`).val();
-                let strTeamPicked = $(`#selTeams${i}`).val().split(" {")[0];
-                let validTeams = document.querySelectorAll('#divMakePicks .scrollable ol li');
-                let optionExists = false;
-                validTeams.forEach((team) => {
-                    if (team.id == strTeamPicked) {
-                        optionExists = true;
+
+            // Remove previous temporary highlights
+            $('.matchup-card').removeClass('matchup-navigation-highlight');
+            $('.matchup-team').removeClass('team-navigation-highlight');
+
+            const navbarHeight = $('.navbar').outerHeight() || 0;
+
+            const targetPosition =
+                $targetCard.offset().top -
+                navbarHeight -
+                100;
+
+            // If we're already essentially at the target, just highlight
+            if (Math.abs(window.scrollY - targetPosition) < 5) {
+                highlightMatchup($targetCard, $targetTeam);
+                return;
+            }
+
+            // Wait for the browser to ACTUALLY finish scrolling
+            window.addEventListener(
+                'scrollend',
+                function () {
+                    highlightMatchup($targetCard, $targetTeam);
+                },
+                { once: true }
+            );
+
+            window.scrollTo({
+                top: targetPosition,
+                behavior: 'smooth'
+            });
+        }
+
+        let highlightTimeout;
+
+        function highlightMatchup($card, $team) {
+            clearTimeout(highlightTimeout);
+
+            // Remove previous classes
+            $('.matchup-card')
+                .removeClass('matchup-navigation-highlight');
+
+            $('.matchup-team')
+                .removeClass('team-navigation-highlight');
+
+            // Force browser to register the removal before adding again
+            void $card[0].offsetWidth;
+
+            $card.addClass('matchup-navigation-highlight');
+            $team.addClass('team-navigation-highlight');
+
+            highlightTimeout = setTimeout(function () {
+                $card.removeClass('matchup-navigation-highlight');
+                $team.removeClass('team-navigation-highlight');
+            }, 2000);
+        }
+
+        $(document).on('click', '.conference-team', function(){
+            const teamName = $(this).data('team');
+
+            const accordionElement = $(this)
+                .closest('.accordion-collapse')[0];
+
+            if (!accordionElement) {
+                navigateToTeamMatchup(teamName);
+                return;
+            }
+
+            // Wait until the accordion has completely finished closing
+            accordionElement.addEventListener(
+                'hidden.bs.collapse',
+                function () {
+                    navigateToTeamMatchup(teamName);
+                },
+                { once: true }
+            );
+
+            // Close the accordion
+            const accordion =
+                bootstrap.Collapse.getOrCreateInstance(
+                    accordionElement,
+                    {
+                        toggle: false
                     }
-                })
+                );
 
-                // check if this selectize has been disabled
-                var selectizeGame = $(`#selGames${i}`)[0].selectize;
-                if (selectizeGame.isDisabled) {
-                    Swal.fire({
-                        title: 'Already Picked',
-                        text: 'This pick has already been made. Please select a different pick.',
-                        icon: 'error'
-                    })
-                }else if (!optionExists) {
-                    Swal.fire({
-                        title: 'Invalid Pick',
-                        text: 'This team is not a valid pick (Already picked or non-FBS team)! Please select a team from the list above.',
-                        icon: 'error'
-                    })
-                } else {
-                    $.get('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selections?groupID=' + groupID + '&userID=' + userID, function(result){
-                        let arrAlreadyPicked = result.selections;
+            accordion.hide();
+        });
 
-                        let blnPickedGame = false;
-                        let blnPickedTeam = false;
-                        
-                        if (arrAlreadyPicked.length > 0) {
-                            var promise = new Promise((resolve, reject) => {
-                                arrAlreadyPicked.forEach((picked, index, array) => {
-                                    if (strGameID == picked.GameID) {
-                                        blnPickedGame = true;
-                                    }
-                                    if (strTeamPicked == picked.PickedTeam.split(" {")[0]) {
-                                        blnPickedTeam = true;
-                                    }
-                                    if (index == array.length - 1) resolve();
-                                })
-                            })
+        $(document).on(
+            'click',
+            '.current-selection',
+            function () {
 
-                            promise.then(() => {
-                                if (blnPickedGame) {
-                                    Swal.fire({
-                                        title: 'Game Already Picked',
-                                        text: 'This game has already been picked by you. Please select a different game.',
-                                        icon: 'error'
-                                    });
-                                } else if (blnPickedTeam) {
-                                    Swal.fire({
-                                        title: 'Team Already Picked',
-                                        text: 'This team has already been picked by you. Please select a different team.',
-                                        icon: 'error'
-                                    });
-                                } else {
-                                    let strTeam = $(`#selTeams${i}`).val();
-                                    let formData = {
-                                        groupID: groupID,
-                                        userID: userID,
-                                        week: week,
-                                        gameID: strGameID,
-                                        pickedTeam: strTeam,
-                                        pickNum: i
-                                    }
-                                    $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selection', formData, function(result){
-                                        Swal.fire({
-                                            title: 'Pick Made',
-                                            text: 'Pick was successfully made!',
-                                            icon: 'success'
-                                        });
-                                        var selectizeGame = $(`#selGames${i}`)[0].selectize;
-                                        selectizeGame.disable();
-                                        var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
-                                        selectizeTeam.disable();
-                                        
-                                        // Remove the team from the list of valid picks
-                                        let team = strTeam.split(" {")[0];
-                                        $(`#divMakePicks .scrollable ol [id='${team}']`).remove();
-                                    })
-                                }
-                            })
-                        } else {
-                            let strTeam = $(`#selTeams${i}`).val();
-                            let formData = {
-                                groupID: groupID,
-                                userID: userID,
-                                week: week,
-                                gameID: strGameID,
-                                pickedTeam: strTeam,
-                                pickNum: i
-                            }
-                            $.post('https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selection', formData, function(result){
-                                Swal.fire({
-                                    title: 'Pick Made',
-                                    text: 'Pick was successfully made!',
-                                    icon: 'success'
-                                });
-                                var selectizeGame = $(`#selGames${i}`)[0].selectize;
-                                selectizeGame.disable();
-                                var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
-                                selectizeTeam.disable();
+                const teamName =
+                    $(this).data('team');
 
-                                // Remove the team from the list of valid picks
-                                let team = strTeam.split(" {")[0];
-                                $(`#divMakePicks .scrollable ol [id="${team}"]`).remove();
-                                swal.close();
-                            })
-                        }
-                    })
-                }
+                navigateToTeamMatchup(
+                    teamName
+                );
+
             }
-        })
+        );
 
-        // Change a pick
-        $(document).on('click', '.btn-change-pick', function(){
-            let buttonID = $(this).attr('id');
-            // Extract the number from the id (assuming format btnMakePicksX)
-            var i = buttonID.replace('btnChangePick', '');
+        /*
+            Functionality for clicking on a matchup card to make a pick
+        */
 
-            // Check if this game has started
-            let strTimeStart = $(`#selGames${i}`).text().split(" {")[1].split("}")[0];
-            let gameTime = new Date(strTimeStart);
-            if (checkGameStart(gameTime)) {
+        function setTeamSelectedState($button, selected) {
+            $button.toggleClass('team-selected', selected);
+
+            $button.find('.selection-status').html(
+                selected
+                    ? `
+                        <span class="badge text-bg-primary">
+                            Selected
+                        </span>
+                    `
+                    : ''
+            );
+        }
+
+        function showSelectionToast(message) {
+
+            $('#selectionToastBody').text(message);
+
+            const toastElement =
+                document.getElementById('selectionToast');
+
+            const toast =
+                bootstrap.Toast.getOrCreateInstance(
+                    toastElement,
+                    {
+                        delay: 1800
+                    }
+                );
+
+            toast.show();
+        }
+
+        function selectTeam(
+            teamName,
+            gameID,
+            $button,
+            $card
+        ) {
+            $card.data(
+                'selection-pending',
+                true
+            );
+
+            const $buttons =
+                $card.find('.matchup-team');
+
+            $buttons.prop('disabled', true);
+
+            $.post(
+                apiURL + '/selection',
+                {
+                    userID: userID,
+                    pickedTeam: teamName,
+                    groupID: groupID,
+                    gameID: gameID,
+                    week: week
+                }
+            )
+            .done(function () {
+
+                setTeamSelectedState(
+                    $button,
+                    true
+                );
+
+                updatePreparedGameSelection(
+                    gameID,
+                    teamName,
+                    true
+                );
+
+                renderCurrentSelections(
+                    preparedGameData,
+                    picksAllowed
+                );
+
+                showSelectionToast(
+                    `${teamName} was successfully saved.`
+                );
+
+            })
+            .fail(function (xhr) {
+
                 Swal.fire({
-                    title: 'Game Already Started',
-                    text: 'This game has already started. You cannot change a pick after the game has started.',
+                    title: 'Unable to Make Pick',
+                    text:
+                        xhr.responseJSON?.error ??
+                        'Unable to make your selection.',
                     icon: 'error'
                 });
-            } else {
-                // check if this selectize has been disabled        (Add Code to delete pick and re-enable selectize)
-                var selectizeGame = $(`#selGames${i}`)[0].selectize;
-                if (selectizeGame.isDisabled) {
-                    // Get the gameID and team that the user has already picked
-                    let strGameID = $(`#selGames${i}`).val();
-                    let strTeam = $(`#selTeams${i}`).val();
 
-                    // Delete the pick
-                    $.ajax({
-                        url: 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/selections?groupID=' + groupID + '&userID=' + userID + '&gameID=' + strGameID,
-                        type: 'DELETE',
-                        success: function(result){
-                            // Enable the selectize boxes
-                            selectizeGame.enable();
-                            var selectizeTeam = $(`#selTeams${i}`)[0].selectize;
-                            selectizeTeam.enable();
-                            Swal.fire({
-                                title: 'Pick Deleted',
-                                text: 'Pick was successfully deleted! Please make a new pick.',
-                                icon: 'warning'
-                            });
-                            // Redisplay the valid picks
-                            $('#divMakePicks .scrollable ol').html('');
-                            displayValidPicks();
-                        }
-                    })
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: "Can't Change Pick",
-                        text: "You can't change a pick that hasn't been made yet!"
-                    })
+            })
+            .always(function () {
+
+                $card.data(
+                    'selection-pending',
+                    false
+                );
+
+                /*
+                    Re-enable buttons according
+                    to their actual availability.
+                */
+                $buttons.each(function () {
+                    const $teamButton = $(this);
+
+                    if (
+                        !$teamButton.hasClass(
+                            'team-unavailable'
+                        )
+                    ) {
+                        $teamButton.prop(
+                            'disabled',
+                            false
+                        );
+                    }
+                });
+            });
+        }
+
+        function deleteSelection(
+            gameID,
+            $button
+        ) {
+            const teamName =
+                $button.data('team');
+
+            $.ajax({
+                url: apiURL + '/selection',
+
+                type: 'DELETE',
+
+                data: {
+                    userID: userID,
+                    groupID: groupID,
+                    gameID: gameID
                 }
+            })
+
+            .done(function () {
+
+                setTeamSelectedState(
+                    $button,
+                    false
+                );
+
+                updatePreparedGameSelection(
+                    gameID,
+                    teamName,
+                    false
+                );
+
+                renderCurrentSelections(
+                    preparedGameData,
+                    picksAllowed
+                );
+
+                showSelectionToast(
+                    `${teamName} was successfully removed.`
+                );
+
+            })
+
+            .fail(function (xhr) {
+
+                Swal.fire({
+                    title: 'Unable to Remove Pick',
+
+                    text:
+                        xhr.responseJSON?.error ??
+                        'Unable to remove your selection.',
+
+                    icon: 'error'
+                });
+
+            });
+        }
+
+        function switchSelection(
+            teamName,
+            gameID,
+            $oldButton,
+            $newButton
+        ) {
+            $.ajax({
+                url: apiURL + '/selection',
+                type: 'PUT',
+
+                data: {
+                    userID: userID,
+                    groupID: groupID,
+                    gameID: gameID,
+                    pickedTeam: teamName
+                }
+            })
+            .done(function () {
+
+                const oldTeamName =
+                    $oldButton.data('team');
+
+                const newTeamName =
+                    $newButton.data('team');
+
+                setTeamSelectedState(
+                    $oldButton,
+                    false
+                );
+
+                setTeamSelectedState(
+                    $newButton,
+                    true
+                );
+
+                updatePreparedGameSelection(
+                    gameID,
+                    oldTeamName,
+                    false
+                );
+
+                updatePreparedGameSelection(
+                    gameID,
+                    newTeamName,
+                    true
+                );
+
+                renderCurrentSelections(
+                    preparedGameData,
+                    picksAllowed
+                );
+
+                showSelectionToast(
+                    `Pick changed to ${newTeamName}.`
+                );
+
+            })
+            .fail(function (xhr) {
+
+                Swal.fire({
+                    title: 'Unable to Change Pick',
+                    text:
+                        xhr.responseJSON?.error ??
+                        'Unable to change your selection.',
+                    icon: 'error'
+                });
+
+            });
+        }
+
+        $(document).on('click', '.matchup-team', function () {
+            const $button = $(this);
+            const $card = $button.closest('.matchup-card');
+
+            // Ignore clicks while this matchup
+            // already has a request running.
+            if ($card.data('selection-pending')) {
+                return;
             }
+
+            const teamName = $button.data('team');
+            const gameID = $button.data('game-id');
+
+            const $selectedTeam =
+                $card.find('.matchup-team.team-selected');
+
+            if ($button.hasClass('team-selected')) {
+                deleteSelection(
+                    gameID,
+                    $button,
+                    $card
+                );
+
+                return;
+            }
+
+            if ($selectedTeam.length > 0) {
+                switchSelection(
+                    teamName,
+                    gameID,
+                    $selectedTeam,
+                    $button,
+                    $card
+                );
+
+                return;
+            }
+
+            selectTeam(
+                teamName,
+                gameID,
+                $button,
+                $card
+            );
         });
-                
+
+        $(window).on('scroll', function () {
+
+            if ($(window).scrollTop() > 400) {
+                $('#btnBackToTop').css('display', 'flex');
+            } else {
+                $('#btnBackToTop').hide();
+            }
+
+        });
+
+        $('#btnBackFromMakePicks').on('click', function () {
+
+            $('#divMakePicks').slideToggle(function () {
+                $('#divDashboard').slideToggle();
+            });
+
+            window.scrollTo({
+                top: 0,
+                behavior: 'instant'
+            });
+
+        });
+
+        $('#btnBackToTop').on('click', function () {
+
+            const navbarHeight =
+                $('.navbar').outerHeight() || 0;
+
+            const targetPosition =
+                $('#divMakePicks').offset().top -
+                navbarHeight -
+                10;
+
+            window.scrollTo({
+                top: targetPosition,
+                behavior: 'smooth'
+            });
+
+        });
     </script>
 </body>
 </html>

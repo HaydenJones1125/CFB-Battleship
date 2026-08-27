@@ -144,6 +144,41 @@ app.post('/users', async (req, res) => {
     }
 });
 
+app.get('/user', async (req, res) => {
+    const strUserID = req.query.userID;
+
+    if (!strUserID) {
+        return res.status(400).json({
+            error: "UserID is required"
+        });
+    }
+
+    try{
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('UserID', sql.UniqueIdentifier, strUserID)
+            .query('SELECT UserID, Username, Email FROM tblUsers WHERE UserID = @UserID');
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({
+                error: "User not found"
+            });
+        }
+
+        const user = result.recordset[0];
+        return res.status(200).json({
+            userID: user.UserID,
+            username: user.Username,
+            email: user.Email
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            error: "Server error"
+        });
+    }
+});
+
 // Get userID while verifying user exists
 app.post('/login', async (req, res) => {
     const strIdentifier = req.body.identifier;
@@ -1792,6 +1827,38 @@ app.get('/groupPicksLeft', async (req, res, next) => {
     }
 });
 
+app.get('/picksLeftByWeek', async (req, res, next) => {
+    let strGroupID = req.query.groupID;
+    let strUserID = req.query.userID;
+
+    if (strGroupID && strUserID) {
+        try {
+            const pool = await poolPromise;
+
+            // Execute the query to select PicksLeft for all weeks by GroupID and UserID
+            const result = await pool.request()
+                .input('GroupID', sql.UniqueIdentifier, strGroupID)
+                .input('UserID', sql.UniqueIdentifier, strUserID)
+                .query(`
+                    SELECT Week, PicksLeft 
+                    FROM tblPicksLeft 
+                    WHERE GroupID = @GroupID AND UserID = @UserID 
+                    ORDER BY Week ASC
+                `);
+
+            res.status(200).json({
+                message: "success",
+                picksLeftArray: result.recordset
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message });
+        }
+    } else {
+        res.status(400).json({ error: "Not all parameters provided" });
+    }
+});
+
 // Get the week the last time the user lost a pick
 // Get the last week where picks left decreased for all users in the group
 app.get('/lastLostWeek', async (req, res, next) => {
@@ -1909,6 +1976,467 @@ app.get('/weeklySpreads', async (req, res, next) => {
         res.status(500).json({ error: 'Failed to fetch spreads' });
     }
 });
+
+/*
+    Endpoints for dashboard data
+*/
+
+// Get this weeks standings for a specific group (Includes positional changes from last week)
+/*
+    Returned Object Example:
+    {
+        GroupID: "group-id",
+        GroupName: "group-name",
+        Week: current-week-number,
+        PreviousWeek: previous-week-number,
+        MemberCount: number-of-members-in-group,
+        HasStandings: true/false,
+        Standings: [
+            {
+                UserID: "user-id",
+                Username: "user-name",
+                Position: current-position,
+                PreviousPosition: previous-position,
+                PositionChange: position-change,
+                PicksLeft: picks-left,
+                LastLostWeek: last-week-user-lost-a-pick,
+            }
+        ]
+    }
+*/
+app.get('/dashboard/currentStandingsByGroup', async (req, res, next) => {
+    try {
+        const { groupID } = req.query;
+
+        if (!groupID) {
+            return res.status(400).json({
+                error: 'groupID is required'
+            });
+        }
+
+        /*
+            1. Get group information + member count
+        */
+        const groupInfo = await dbGet(`
+            SELECT
+                g.GroupID,
+                g.GroupName,
+                COUNT(gm.UserID) AS MemberCount
+            FROM tblGroups g
+            LEFT JOIN tblGroupMembers gm
+                ON gm.GroupID = g.GroupID
+            WHERE g.GroupID = @param1
+            GROUP BY
+                g.GroupID,
+                g.GroupName
+        `, [groupID]);
+
+        if (!groupInfo) {
+            return res.status(404).json({
+                error: 'Group not found'
+            });
+        }
+
+
+        /*
+            2. Get the two most recent finalized
+               standings weeks for this group
+        */
+        const weeks = await dbGetAll(`
+            SELECT DISTINCT TOP 2
+                Week
+            FROM tblStandingsHistory
+            WHERE GroupID = @param1
+            ORDER BY Week DESC
+        `, [groupID]);
+
+        const currentWeek =
+            weeks[0]?.Week ?? null;
+
+        const previousWeek =
+            weeks[1]?.Week ?? null;
+
+
+        /*
+            No standings have been generated yet.
+        */
+        if (currentWeek === null) {
+            return res.json({
+                GroupID: groupInfo.GroupID,
+                GroupName: groupInfo.GroupName,
+
+                Week: null,
+                PreviousWeek: null,
+
+                MemberCount: groupInfo.MemberCount,
+
+                HasStandings: false,
+
+                Standings: []
+            });
+        }
+
+
+        /*
+            3. Retrieve current standings plus the
+               previous position for each user.
+
+            The LEFT JOIN means Week 2 will still
+            work even though there is no previous
+            standings snapshot.
+        */
+        const rows = await dbGetAll(`
+            SELECT
+                currentStanding.UserID,
+                gm.Username,
+
+                currentStanding.Position,
+                previousStanding.Position
+                    AS PreviousPosition,
+
+                currentStanding.PicksLeft,
+                currentStanding.LastPickLostWeek
+
+            FROM tblStandingsHistory currentStanding
+
+            INNER JOIN tblGroupMembers gm
+                ON gm.UserID = currentStanding.UserID
+                AND gm.GroupID = currentStanding.GroupID
+
+            LEFT JOIN tblStandingsHistory previousStanding
+                ON previousStanding.UserID =
+                    currentStanding.UserID
+                AND previousStanding.GroupID =
+                    currentStanding.GroupID
+                AND previousStanding.Week =
+                    @param3
+
+            WHERE currentStanding.GroupID =
+                @param1
+
+              AND currentStanding.Week =
+                @param2
+
+            ORDER BY
+                currentStanding.Position,
+                gm.Username
+        `, [
+            groupID,
+            currentWeek,
+            previousWeek
+        ]);
+
+
+        /*
+            4. Add PositionChange
+        */
+        const standings = rows.map(row => {
+            const previousPosition =
+                row.PreviousPosition ?? null;
+
+            const positionChange =
+                previousPosition === null
+                    ? null
+                    : previousPosition -
+                      row.Position;
+
+            return {
+                UserID: row.UserID,
+                Username: row.Username,
+
+                Position: row.Position,
+                PreviousPosition:
+                    previousPosition,
+                PositionChange:
+                    positionChange,
+
+                PicksLeft: row.PicksLeft,
+                LastPickLostWeek:
+                    row.LastPickLostWeek
+            };
+        });
+
+
+        /*
+            5. Final response
+        */
+        return res.json({
+            GroupID: groupInfo.GroupID,
+            GroupName: groupInfo.GroupName,
+
+            Week: currentWeek,
+            PreviousWeek: previousWeek,
+
+            MemberCount: groupInfo.MemberCount,
+
+            HasStandings: true,
+
+            Standings: standings
+        });
+
+    } catch (error) {
+        console.error(
+            'Error getting dashboard standings:',
+            error
+        );
+
+        return res.status(500).json({
+            error: 'Failed to get standings'
+        });
+    }
+})
+
+// Get all standings for an user for a specific group
+/*
+    Returned Object Example:
+    {
+        UserID: "user-id",
+        GroupID: "group-id",
+        MemberCount: number-of-members-in-group,
+        History: [
+            {
+                Week: week-number,
+                Position: position,
+                PicksLeft: picks-left
+            }
+        ]    
+    }
+*/
+app.get('/dashboard/allStandingsByUser', async (req, res, next) => {
+    let strGroupID = req.query.groupID;
+    let strUserID = req.query.userID;
+
+    if (!strGroupID || !strUserID) {
+        return res.status(400).json({ error: "GroupID and UserID are required" });
+    }
+
+    // First get all standings for the user in the group
+    try {
+        // Verify the user belongs to the group
+        const member = await dbGet(`
+            SELECT UserID
+            FROM tblGroupMembers
+            WHERE GroupID = @param1
+              AND UserID = @param2
+        `, [
+            strGroupID,
+            strUserID
+        ]);
+
+        if (!member) {
+            return res.status(404).json({
+                error: "User is not a member of this group"
+            });
+        }
+
+        const groupInfo = await dbGet(`
+            SELECT COUNT(*) AS MemberCount
+            FROM tblGroupMembers
+            WHERE GroupID = @param1
+        `, [strGroupID]);
+
+        const standings = await dbGetAll(`
+            SELECT Week, Position, PicksLeft
+            FROM tblStandingsHistory
+            WHERE GroupID = @param1 AND UserID = @param2
+            ORDER BY Week ASC
+        `, [strGroupID, strUserID]);
+
+        // Prepend week 1 to the data with Position 1 and PicksLeft 7
+        const history = [
+            { Week: 1, Position: 1, PicksLeft: 7 },
+            ...standings
+        ]
+
+        return res.status(200).json({
+            UserID: strUserID,
+            GroupID: strGroupID,
+            MemberCount: groupInfo.MemberCount,
+            History: history
+        })
+
+    } catch (error) {
+        return res.status(500).json({ error: 'Failed to fetch standings' });
+    }
+});
+
+/*
+    Get a summary of losses for all users in a group
+
+    Returned Object Example:
+    {
+        GroupID: "group-id",
+        Week: current-week-number,
+        HasLosses: true/false,
+        UsersWithLosses: (int) number of users with losses,
+        TotalLostPicks: (int) total number of lost picks in the group,
+        Losses: [
+            {
+                PickedTeam: "team-name",
+                PickCount: (int) number of users that lost this pick
+            },
+            ...
+        ]
+    }
+*/
+app.get('/dashboard/groupLossesSummary', async (req, res) => {
+    const strGroupID = req.query.groupID;
+
+    if (!strGroupID) {
+        return res.status(400).json({
+            error: 'GroupID is required'
+        });
+    }
+
+    try {
+        // ------------------------------------------------
+        // 1. Verify the group exists
+        // ------------------------------------------------
+        const group = await dbGet(`
+            SELECT GroupID
+            FROM tblGroups
+            WHERE GroupID = @param1
+        `, [strGroupID]);
+
+        if (!group) {
+            return res.status(404).json({
+                error: 'Group not found'
+            });
+        }
+
+
+        // ------------------------------------------------
+        // 2. Find the latest finalized standings week
+        // ------------------------------------------------
+        const latestStandings = await dbGet(`
+            SELECT MAX(Week) AS Week
+            FROM tblStandingsHistory
+            WHERE GroupID = @param1
+        `, [strGroupID]);
+
+
+        // ------------------------------------------------
+        // 3. No finalized standings yet
+        //    Means Week 1 has not been processed
+        // ------------------------------------------------
+        if (
+            !latestStandings ||
+            latestStandings.Week === null
+        ) {
+            return res.status(200).json({
+                GroupID: strGroupID,
+                Week: null,
+
+                HasLosses: false,
+
+                UsersWithLosses: 0,
+                TotalLostPicks: 0,
+
+                Losses: []
+            });
+        }
+
+
+        // ------------------------------------------------
+        // 4. Determine the most recently processed week
+        // ------------------------------------------------
+
+        // Example:
+        // Standings Week 2 were created after Week 1 was processed
+        // Standings Week 6 were created after Week 5 was processed
+        const lastWeek =
+            latestStandings.Week - 1;
+
+
+        // ------------------------------------------------
+        // 5. Get loss summary
+        // ------------------------------------------------
+        const lossesSummary = await dbGet(`
+            SELECT
+                COUNT(DISTINCT UserID)
+                    AS UsersWithLosses,
+
+                COALESCE(
+                    SUM(PicksLost),
+                    0
+                ) AS TotalLostPicks
+
+            FROM tblPicksLost
+
+            WHERE GroupID = @param1
+              AND Week = @param2
+              AND selection_correct = 0
+        `, [
+            strGroupID,
+            lastWeek
+        ]);
+
+
+        // ------------------------------------------------
+        // 6. Get losing teams
+        // ------------------------------------------------
+        const lossesBreakdown = await dbGetAll(`
+            SELECT
+                PickedTeam,
+                COUNT(*) AS PickCount
+
+            FROM tblPicksLost
+
+            WHERE GroupID = @param1
+              AND Week = @param2
+              AND selection_correct = 0
+
+            GROUP BY PickedTeam
+
+            ORDER BY
+                PickCount DESC,
+                PickedTeam ASC
+        `, [
+            strGroupID,
+            lastWeek
+        ]);
+
+
+        // ------------------------------------------------
+        // 7. Build final response
+        // ------------------------------------------------
+        const usersWithLosses =
+            lossesSummary?.UsersWithLosses ?? 0;
+
+        const totalLostPicks =
+            lossesSummary?.TotalLostPicks ?? 0;
+
+
+        return res.status(200).json({
+            GroupID: strGroupID,
+            Week: lastWeek,
+
+            HasLosses:
+                usersWithLosses > 0,
+
+            UsersWithLosses:
+                usersWithLosses,
+
+            TotalLostPicks:
+                totalLostPicks,
+
+            Losses:
+                lossesBreakdown ?? []
+        });
+
+    } catch (error) {
+        console.error(
+            'Error fetching group losses summary:',
+            error
+        );
+
+        return res.status(500).json({
+            error: 'Failed to fetch losses summary'
+        });
+    }
+});
+
+
 
 /*
     Updating Week Number Automatically Each Monday
@@ -2205,210 +2733,946 @@ async function getGamesForWeek(week) {
     return resp.json();
 }
 
-// Plan ONE user (no writes)
-async function planUserChecks(userID, groupID, targetWeek) {
-    let lastWeek = targetWeek ? Number(targetWeek) : undefined;
-    if (!lastWeek) {
-        const all = await getAllGames();
-        const wk = getFootballWeekNumber(all);
-        lastWeek = Math.max(1, wk - 1);
+async function getStartingPicksLeft(userID, groupID, week) {
+    const row = await dbGet(
+        `SELECT PicksLeft
+         FROM tblPicksLeft
+         WHERE UserID=@param1
+           AND GroupID=@param2
+           AND Week=@param3`,
+        [
+            userID,
+            groupID,
+            week
+        ]
+    );
+
+    if (row) {
+        return row.PicksLeft;
     }
 
-    const weekGames = await getGamesForWeek(lastWeek);
+    // Week 1 always starts with 7
+    if (week === 1) {
+        return 7;
+    }
+
+    throw new Error(
+        `Missing PicksLeft row for user=${userID}, ` +
+        `group=${groupID}, week=${week}`
+    );
+}
+
+function getUnresolvedSelections(bundle) {
+    return bundle.plans.flatMap(
+        plan =>
+            plan.updates
+                .filter(
+                    update =>
+                        update.correctPick == null
+                )
+                .map(update => ({
+                    UserID:
+                        plan.userID,
+
+                    GroupID:
+                        plan.groupID,
+
+                    GameID:
+                        update.row.GameID,
+
+                    PickedTeam:
+                        update.row.PickedTeam,
+
+                    Reason:
+                        update.reason || 'Unknown'
+                }))
+    );
+}
+
+async function calculateGroupStandings(groupID, week, tx = null) {
+    let result;
+
+    const query = `
+        SELECT
+            gm.UserID,
+            gm.Username,
+            pl.PicksLeft,
+
+            (
+                SELECT MAX(s.Week)
+                FROM tblSelections s
+                WHERE s.UserID = gm.UserID
+                  AND s.GroupID = gm.GroupID
+                  AND s.selection_correct = 0
+                  AND s.Week < @wk
+            ) AS LastPickLostWeek
+
+        FROM tblGroupMembers gm
+
+        LEFT JOIN tblPicksLeft pl
+            ON pl.UserID = gm.UserID
+            AND pl.GroupID = gm.GroupID
+            AND pl.Week = @wk
+
+        WHERE gm.GroupID = @gid
+    `;
+
+    if (tx) {
+        result = await new sql.Request(tx)
+            .input('gid', sql.UniqueIdentifier, groupID)
+            .input('wk', sql.Int, week)
+            .query(query);
+
+        result = result.recordset;
+    } else {
+        result = await dbGetAll(
+            `
+            SELECT
+                gm.UserID,
+                gm.Username,
+                pl.PicksLeft,
+
+                (
+                    SELECT MAX(s.Week)
+                    FROM tblSelections s
+                    WHERE s.UserID = gm.UserID
+                      AND s.GroupID = gm.GroupID
+                      AND s.selection_correct = 0
+                      AND s.Week < @param2
+                ) AS LastPickLostWeek
+
+            FROM tblGroupMembers gm
+
+            LEFT JOIN tblPicksLeft pl
+                ON pl.UserID = gm.UserID
+                AND pl.GroupID = gm.GroupID
+                AND pl.Week = @param2
+
+            WHERE gm.GroupID = @param1
+            `,
+            [
+                groupID,
+                week
+            ]
+        );
+    }
+
+    return result;
+}
+
+function sortStandings(standings) {
+    return standings.sort((a, b) => {
+        const aPicks = a.PicksLeft ?? 0;
+        const bPicks = b.PicksLeft ?? 0;
+
+        if (bPicks !== aPicks) {
+            return bPicks - aPicks;
+        }
+
+        const aLastLost = a.LastPickLostWeek ?? 0;
+        const bLastLost = b.LastPickLostWeek ?? 0;
+
+        return bLastLost - aLastLost;
+    });
+}
+
+function assignStandingsPositions(standings) {
+    let previous = null;
+    let previousPosition = 0;
+
+    return standings.map((standing, index) => {
+        const picksLeft =
+            standing.PicksLeft ?? 0;
+
+        const lastLost =
+            standing.LastPickLostWeek ?? 0;
+
+        let position;
+
+        const tiedWithPrevious =
+            previous &&
+            picksLeft === (previous.PicksLeft ?? 0) &&
+            lastLost === (previous.LastPickLostWeek ?? 0);
+
+        if (tiedWithPrevious) {
+            position = previousPosition;
+        } else {
+            position = index + 1;
+        }
+
+        previous = standing;
+        previousPosition = position;
+
+        return {
+            ...standing,
+            Position: position
+        };
+    });
+}
+
+async function getGroupStandings(groupID, week, tx = null) {
+    const standings =
+        await calculateGroupStandings(
+            groupID,
+            week,
+            tx
+        );
+
+    sortStandings(standings);
+
+    return assignStandingsPositions(
+        standings
+    );
+}
+
+async function previewGroupStandings(groupID, week) {
+    const standings =
+        await getGroupStandings(
+            groupID,
+            week
+        );
+
+    console.table(
+        standings.map(s => ({
+            Position: s.Position,
+            Username: s.Username,
+            PicksLeft: s.PicksLeft,
+            LastPickLostWeek:
+                s.LastPickLostWeek ?? '-'
+        }))
+    );
+
+    return standings;
+}
+
+async function saveGroupStandings(
+    tx,
+    groupID,
+    week
+) {
+    const standings =
+        await getGroupStandings(
+            groupID,
+            week,
+            tx
+        );
+
+    // Remove the old snapshot if this week
+    // is being rerun.
+    await new sql.Request(tx)
+        .input(
+            'gid',
+            sql.UniqueIdentifier,
+            groupID
+        )
+        .input(
+            'wk',
+            sql.Int,
+            week
+        )
+        .query(`
+            DELETE FROM tblStandingsHistory
+            WHERE GroupID=@gid
+              AND Week=@wk
+        `);
+
+    for (const standing of standings) {
+        await new sql.Request(tx)
+            .input(
+                'uid',
+                sql.UniqueIdentifier,
+                standing.UserID
+            )
+            .input(
+                'gid',
+                sql.UniqueIdentifier,
+                groupID
+            )
+            .input(
+                'wk',
+                sql.Int,
+                week
+            )
+            .input(
+                'position',
+                sql.Int,
+                standing.Position
+            )
+            .input(
+                'picks',
+                sql.Int,
+                standing.PicksLeft ?? 0
+            )
+            .input(
+                'lastLost',
+                sql.Int,
+                standing.LastPickLostWeek ?? null
+            )
+            .query(`
+                INSERT INTO tblStandingsHistory
+                (
+                    UserID,
+                    GroupID,
+                    Week,
+                    Position,
+                    PicksLeft,
+                    LastPickLostWeek
+                )
+                VALUES
+                (
+                    @uid,
+                    @gid,
+                    @wk,
+                    @position,
+                    @picks,
+                    @lastLost
+                )
+            `);
+    }
+
+    return standings;
+}
+
+// Plan ONE user (no writes)
+async function planUserChecks(userID, groupID, targetWeek) {
+    let processedWeek = targetWeek
+        ? Number(targetWeek)
+        : undefined;
+
+    if (!processedWeek) {
+        const all = await getAllGames();
+        const wk = getFootballWeekNumber(all);
+
+        processedWeek = Math.max(1, wk - 1);
+    }
+
+    const weekGames =
+        await getGamesForWeek(processedWeek);
+
     const selections = await dbGetAll(
-        "SELECT * FROM tblSelections WHERE Week=@param1 AND UserID=@param2 AND GroupID=@param3",
-        [lastWeek, userID, groupID]
+        `SELECT *
+         FROM tblSelections
+         WHERE Week=@param1
+           AND UserID=@param2
+           AND GroupID=@param3`,
+        [
+            processedWeek,
+            userID,
+            groupID
+        ]
     );
 
     const updates = selections.map(row => {
-    const game = weekGames.find(g => g.id == row.GameID);
-    if (!game) return { row, correctPick: null, reason: 'game not found' };
-        const pickedTeam = String(row.PickedTeam).split(" {")[0];
-        const correctPick = pickedTeam === game.homeTeam
-            ? (game.homePoints > game.awayPoints)
-            : (game.awayPoints > game.homePoints);
-        return { row, correctPick: correctPick ? 1 : 0 };
+        const game = weekGames.find(
+            g => g.id == row.GameID
+        );
+
+        if (!game) {
+            return {
+                row,
+                correctPick: null,
+                reason: 'game not found'
+            };
+        }
+
+        const pickedTeam =
+            String(row.PickedTeam).split(" {")[0];
+
+        const correctPick =
+            pickedTeam === game.homeTeam
+                ? game.homePoints > game.awayPoints
+                : game.awayPoints > game.homePoints;
+
+        return {
+            row,
+            correctPick: correctPick ? 1 : 0
+        };
     });
 
-    const latest = await dbGet(
-        "SELECT TOP 1 PicksLeft, Week FROM tblPicksLeft WHERE GroupID=@param1 AND UserID=@param2 ORDER BY Week DESC",
-        [groupID, userID]
+    const baseline =
+        await getStartingPicksLeft(
+            userID,
+            groupID,
+            processedWeek
+        );
+
+    const incorrect = updates.filter(
+        u => u.correctPick === 0
+    ).length;
+
+    const missedPicks = Math.max(
+        0,
+        baseline - selections.length
     );
 
-    const incorrect = updates.filter(u => u.correctPick === 0).length;
-    const baseline = latest ? latest.PicksLeft : 7;
-    const nextWeekPicksLeft = Math.max(0, baseline - incorrect);
+    const picksLost =
+        incorrect + missedPicks;
 
-    return { userID, groupID, lastWeek, baseline, incorrect, nextWeekPicksLeft, updates, selectionCount: selections.length };
+    const nextWeekPicksLeft = Math.max(
+        0,
+        baseline - picksLost
+    );
+
+    return {
+        userID,
+        groupID,
+        processedWeek,
+        baseline,
+        selectionCount: selections.length,
+        incorrect,
+        missedPicks,
+        picksLost,
+        nextWeekPicksLeft,
+        updates
+    };
 }
 
 // Plan ALL users (no writes)
 async function planAllUsersChecks(targetWeek) {
-    let lastWeek = targetWeek ? Number(targetWeek) : undefined;
-    if (!lastWeek) {
+    let processedWeek = targetWeek
+        ? Number(targetWeek)
+        : undefined;
+
+    if (!processedWeek) {
         const all = await getAllGames();
         const wk = getFootballWeekNumber(all);
-        lastWeek = Math.max(1, wk - 1);
+
+        processedWeek = Math.max(1, wk - 1);
     }
 
-    const weekGames = await getGamesForWeek(lastWeek);
-    const allSelections = await dbGetAll("SELECT * FROM tblSelections WHERE Week=@param1", [lastWeek]);
+    const weekGames =
+        await getGamesForWeek(processedWeek);
 
+    // Every user/group relationship should be processed,
+    // even if the user made zero selections.
+    const allMembers = await dbGetAll(`
+        SELECT UserID, GroupID
+        FROM tblGroupMembers
+    `);
+
+    const allSelections = await dbGetAll(
+        `SELECT *
+         FROM tblSelections
+         WHERE Week=@param1`,
+        [processedWeek]
+    );
+
+    /*
+        Create one map entry for every group member.
+        Users with zero selections will simply have rows: []
+    */
     const byUser = new Map();
+
+    for (const member of allMembers) {
+        const key =
+            `${member.UserID}|${member.GroupID}`;
+
+        byUser.set(key, {
+            userID: member.UserID,
+            groupID: member.GroupID,
+            rows: []
+        });
+    }
+
+    /*
+        Add each selection to the corresponding
+        user/group combination.
+    */
     for (const row of allSelections) {
-        const key = `${row.UserID}|${row.GroupID}`;
-        if (!byUser.has(key)) byUser.set(key, { userID: row.UserID, groupID: row.GroupID, rows: [] });
-        byUser.get(key).rows.push(row);
+        const key =
+            `${row.UserID}|${row.GroupID}`;
+
+        if (byUser.has(key)) {
+            byUser.get(key).rows.push(row);
+        }
     }
 
     const plans = [];
-    for (const { userID, groupID, rows } of byUser.values()) {
-        const updates = rows.map(r => {
-            const game = weekGames.find(g => g.id == r.GameID);
-            if (!game) return { row: r, correctPick: null, reason: 'game not found' };
-            const pickedTeam = String(r.PickedTeam).split(" {")[0];
-            const correctPick = pickedTeam === game.homeTeam
-                ? (game.homePoints > game.awayPoints)
-                : (game.awayPoints > game.homePoints);
-            return { row: r, correctPick: correctPick ? 1 : 0 };
+
+    for (
+        const { userID, groupID, rows }
+        of byUser.values()
+    ) {
+        const updates = rows.map(row => {
+            const game = weekGames.find(
+                g => g.id == row.GameID
+            );
+
+            if (!game) {
+                return {
+                    row,
+                    correctPick: null,
+                    reason: 'game not found'
+                };
+            }
+
+            const pickedTeam =
+                String(row.PickedTeam)
+                    .split(" {")[0];
+
+            const correctPick =
+                pickedTeam === game.homeTeam
+                    ? game.homePoints > game.awayPoints
+                    : game.awayPoints > game.homePoints;
+
+            return {
+                row,
+                correctPick: correctPick ? 1 : 0
+            };
         });
 
-        const latest = await dbGet(
-            "SELECT TOP 1 PicksLeft FROM tblPicksLeft WHERE GroupID=@param1 AND UserID=@param2 ORDER BY Week DESC",
-            [groupID, userID]
-        );
-        const incorrect = updates.filter(u => u.correctPick === 0).length;
-        const baseline = latest ? latest.PicksLeft : 7;
-        const nextWeekPicksLeft = Math.max(0, baseline - incorrect);
+        const baseline =
+            await getStartingPicksLeft(
+                userID,
+                groupID,
+                processedWeek
+            );
 
-        plans.push({ userID, groupID, lastWeek, baseline, incorrect, nextWeekPicksLeft, updates });
+        const incorrect = updates.filter(
+            u => u.correctPick === 0
+        ).length;
+
+        /*
+            If they start with 5 picks but only make
+            3 selections, they lose the 2 they didn't make.
+        */
+        const missedPicks = Math.max(
+            0,
+            baseline - rows.length
+        );
+
+        const picksLost =
+            incorrect + missedPicks;
+
+        const nextWeekPicksLeft = Math.max(
+            0,
+            baseline - picksLost
+        );
+
+        plans.push({
+            userID,
+            groupID,
+            processedWeek,
+            baseline,
+            selectionCount: rows.length,
+            incorrect,
+            missedPicks,
+            picksLost,
+            nextWeekPicksLeft,
+            updates
+        });
     }
 
-    return { lastWeek, totalUsers: plans.length, plans };
+    return {
+        processedWeek,
+        totalUsers: plans.length,
+        plans
+    };
 }
 
 // Undo the first bulk apply for a given week:
 // - Reset selection_correct to NULL for Week = week
 // - Delete tblPicksLeft rows for Week = week + 1 for affected users
 async function undoAllPicksRun(targetWeek) {
-  // Derive the week if not provided (same logic as your planners)
-  let week = targetWeek ? Number(targetWeek) : undefined;
-  if (!week) {
-    const all = await getAllGames();
-    const wk = getFootballWeekNumber(all);
-    week = Math.max(1, wk - 1);
-  }
+    let processedWeek =
+        targetWeek
+            ? Number(targetWeek)
+            : undefined;
 
-  // Build the same plan you would have applied, so we know which users/groups were touched
-  const bundle = await planAllUsersChecks(week);
+    if (!processedWeek) {
+        const all = await getAllGames();
+        const wk = getFootballWeekNumber(all);
 
-  const pool = await poolPromise;
-  const tx = new sql.Transaction(pool);
-  await tx.begin();
-  try {
-    await new sql.Request(tx).batch('SET XACT_ABORT ON;');
-
-    // 1) Reset all selection_correct to NULL for that week
-    await new sql.Request(tx)
-      .input('wk', sql.Int, week)
-      .query(`
-        UPDATE tblSelections
-        SET selection_correct = NULL
-        WHERE Week = @wk
-      `);
-
-    // 2) Delete next week's PicksLeft only for users we planned to touch
-    //    (more precise than deleting for the whole table)
-    for (const p of bundle.plans) {
-      await new sql.Request(tx)
-        .input('uid', sql.UniqueIdentifier, p.userID)
-        .input('gid', sql.UniqueIdentifier, p.groupID)
-        .input('wk',  sql.Int, week + 1)
-        .query(`
-          DELETE FROM tblPicksLeft
-          WHERE UserID = @uid AND GroupID = @gid AND Week = @wk
-        `);
+        processedWeek =
+            Math.max(1, wk - 1);
     }
 
-    await tx.commit();
-    console.log(`🔁 Undo complete: week ${week} selections reset; week ${week + 1} PicksLeft deleted for ${bundle.plans.length} users.`);
-  } catch (e) {
-    await tx.rollback();
-    console.error('Undo failed, rolled back:', e.message || e);
-    throw e;
-  }
+    const nextWeek =
+        processedWeek + 1;
+
+    const bundle =
+        await planAllUsersChecks(
+            processedWeek
+        );
+
+    const pool =
+        await poolPromise;
+
+    const tx =
+        new sql.Transaction(pool);
+
+    await tx.begin();
+
+    try {
+        await new sql.Request(tx)
+            .batch(
+                'SET XACT_ABORT ON;'
+            );
+
+
+        // ======================================
+        // 1. RESET SELECTION RESULTS
+        // ======================================
+
+        await new sql.Request(tx)
+            .input(
+                'wk',
+                sql.Int,
+                processedWeek
+            )
+            .query(`
+                UPDATE tblSelections
+                SET selection_correct = NULL
+                WHERE Week = @wk
+            `);
+
+
+        // ======================================
+        // 2. DELETE NEXT WEEK'S PICKS LEFT
+        // ======================================
+
+        for (const p of bundle.plans) {
+            await new sql.Request(tx)
+                .input(
+                    'uid',
+                    sql.UniqueIdentifier,
+                    p.userID
+                )
+                .input(
+                    'gid',
+                    sql.UniqueIdentifier,
+                    p.groupID
+                )
+                .input(
+                    'wk',
+                    sql.Int,
+                    nextWeek
+                )
+                .query(`
+                    DELETE FROM tblPicksLeft
+                    WHERE UserID = @uid
+                      AND GroupID = @gid
+                      AND Week = @wk
+                `);
+        }
+
+
+        // ======================================
+        // 3. DELETE NEXT WEEK'S STANDINGS
+        // ======================================
+
+        const groupIDs = [
+            ...new Set(
+                bundle.plans.map(
+                    p => p.groupID
+                )
+            )
+        ];
+
+        for (const groupID of groupIDs) {
+            await new sql.Request(tx)
+                .input(
+                    'gid',
+                    sql.UniqueIdentifier,
+                    groupID
+                )
+                .input(
+                    'wk',
+                    sql.Int,
+                    nextWeek
+                )
+                .query(`
+                    DELETE FROM tblStandingsHistory
+                    WHERE GroupID = @gid
+                      AND Week = @wk
+                `);
+        }
+
+
+        // ======================================
+        // 4. COMMIT UNDO
+        // ======================================
+
+        await tx.commit();
+
+        console.log(
+            `🔁 Undo complete:`
+        );
+
+        console.log(
+            ` - Week ${processedWeek} selections reset`
+        );
+
+        console.log(
+            ` - Week ${nextWeek} PicksLeft deleted`
+        );
+
+        console.log(
+            ` - Week ${nextWeek} standings deleted`
+        );
+
+    } catch (e) {
+        await tx.rollback();
+
+        console.error(
+            'Undo failed, rolled back:',
+            e.message || e
+        );
+
+        throw e;
+    }
 }
 
 async function commitAllUsersChecks(planBundle) {
-    const { lastWeek, plans } = planBundle;
+    const {
+        processedWeek,
+        plans
+    } = planBundle;
+
+    const nextWeek = processedWeek + 1;
+
     const pool = await poolPromise;
     const tx = new sql.Transaction(pool);
-    await tx.begin();
-    try {
-        await new sql.Request(tx).batch("SET XACT_ABORT ON;");
 
-        // 1) selection_correct updates
+    await tx.begin();
+
+    try {
+        await new sql.Request(tx)
+            .batch('SET XACT_ABORT ON;');
+
+
+        // ======================================
+        // 1. UPDATE SELECTION RESULTS
+        // ======================================
+
         for (const p of plans) {
             for (const u of p.updates) {
-                if (u.correctPick == null) continue;
+                if (u.correctPick == null) {
+                    continue;
+                }
+
                 await new sql.Request(tx)
-                    .input('sel', sql.Int, u.correctPick)
-                    .input('uid', sql.UniqueIdentifier, u.row.UserID)
-                    .input('gid', sql.UniqueIdentifier, u.row.GroupID)
-                    .input('game', sql.Int, u.row.GameID)
-                    .input('wk', sql.Int, u.row.Week)
+                    .input(
+                        'sel',
+                        sql.Int,
+                        u.correctPick
+                    )
+                    .input(
+                        'uid',
+                        sql.UniqueIdentifier,
+                        u.row.UserID
+                    )
+                    .input(
+                        'gid',
+                        sql.UniqueIdentifier,
+                        u.row.GroupID
+                    )
+                    .input(
+                        'game',
+                        sql.Int,
+                        u.row.GameID
+                    )
+                    .input(
+                        'wk',
+                        sql.Int,
+                        u.row.Week
+                    )
                     .query(`
-                    UPDATE tblSelections
-                    SET selection_correct = @sel
-                    WHERE UserID=@uid AND GroupID=@gid AND GameID=@game AND Week=@wk
+                        UPDATE tblSelections
+                        SET selection_correct = @sel
+                        WHERE UserID = @uid
+                          AND GroupID = @gid
+                          AND GameID = @game
+                          AND Week = @wk
                     `);
             }
         }
 
-        // 2) next week's PicksLeft inserts (idempotent)
+
+        // ======================================
+        // 2. WRITE NEXT WEEK'S PICKS LEFT
+        // ======================================
+
         for (const p of plans) {
             await new sql.Request(tx)
-                .input('uid', sql.UniqueIdentifier, p.userID)
-                .input('gid', sql.UniqueIdentifier, p.groupID)
-                .input('picks', sql.Int, p.nextWeekPicksLeft)
-                .input('wk', sql.Int, lastWeek + 1)
+                .input(
+                    'uid',
+                    sql.UniqueIdentifier,
+                    p.userID
+                )
+                .input(
+                    'gid',
+                    sql.UniqueIdentifier,
+                    p.groupID
+                )
+                .input(
+                    'picks',
+                    sql.Int,
+                    p.nextWeekPicksLeft
+                )
+                .input(
+                    'wk',
+                    sql.Int,
+                    nextWeek
+                )
                 .query(`
-                    IF NOT EXISTS (
-                    SELECT 1 FROM tblPicksLeft WHERE UserID=@uid AND GroupID=@gid AND Week=@wk
+                    IF EXISTS (
+                        SELECT 1
+                        FROM tblPicksLeft
+                        WHERE UserID = @uid
+                          AND GroupID = @gid
+                          AND Week = @wk
                     )
-                    INSERT INTO tblPicksLeft (UserID, GroupID, PicksLeft, Week)
-                    VALUES (@uid, @gid, @picks, @wk);
+                    BEGIN
+                        UPDATE tblPicksLeft
+                        SET PicksLeft = @picks
+                        WHERE UserID = @uid
+                          AND GroupID = @gid
+                          AND Week = @wk;
+                    END
+                    ELSE
+                    BEGIN
+                        INSERT INTO tblPicksLeft
+                        (
+                            UserID,
+                            GroupID,
+                            PicksLeft,
+                            Week
+                        )
+                        VALUES
+                        (
+                            @uid,
+                            @gid,
+                            @picks,
+                            @wk
+                        );
+                    END
                 `);
         }
 
+
+        // ======================================
+        // 3. SAVE NEXT WEEK'S STANDINGS
+        // ======================================
+
+        const groupIDs = [
+            ...new Set(
+                plans.map(p => p.groupID)
+            )
+        ];
+
+        for (const groupID of groupIDs) {
+            await saveGroupStandings(
+                tx,
+                groupID,
+                nextWeek
+            );
+        }
+
+
+        // ======================================
+        // 4. COMMIT EVERYTHING
+        // ======================================
+
         await tx.commit();
-        console.log(`✅ Committed ${plans.length} users for week ${lastWeek}`);
+
+        console.log(
+            `✅ Committed ${plans.length} users ` +
+            `for week ${processedWeek}`
+        );
+
+        console.log(
+            `✅ Saved standings for ${groupIDs.length} groups ` +
+            `for week ${nextWeek}`
+        );
+
     } catch (e) {
         await tx.rollback();
-        console.error('❌ Rolled back bulk commit:', e.message || e);
+
+        console.error(
+            '❌ Rolled back bulk commit:',
+            e.message || e
+        );
+
         throw e;
     }
 }
 
 // Dry-run entry point: prints what would happen, does NOT write.
-async function runGameChecksForSpecificUser(userID, groupID, { week, dryRun = true } = {}) {
-    const plan = await planUserChecks(userID, groupID, week);
+async function runGameChecksForSpecificUser(
+    userID,
+    groupID,
+    { week, dryRun = true } = {}
+) {
+    const plan =
+        await planUserChecks(
+            userID,
+            groupID,
+            week
+        );
 
-    console.log(`\nDRY-RUN — user=${userID}, group=${groupID}, lastWeek=${plan.lastWeek}`);
-    if (plan.selectionCount === 0) {
-        console.log('No selections found for that user/group/week.');
-    }
-    console.table(
-    plan.updates.map(u => ({
-        GameID: u.row.GameID,
-        PickedTeam: u.row.PickedTeam,
-        WouldSet_selection_correct: u.correctPick,
-        Note: u.correctPick == null ? (u.reason || '') : ''
-    }))
-    );
     console.log(
-        `Baseline PicksLeft: ${plan.baseline} | Incorrect this week: ${plan.incorrect} | ` +
-        `Next week's PicksLeft (computed): ${plan.nextWeekPicksLeft}\n`
+        `\nDRY-RUN — ` +
+        `user=${userID}, ` +
+        `group=${groupID}, ` +
+        `week=${plan.processedWeek}`
+    );
+
+    console.table(
+        plan.updates.map(u => ({
+            GameID: u.row.GameID,
+            PickedTeam: u.row.PickedTeam,
+            WouldSet_selection_correct:
+                u.correctPick,
+            Note:
+                u.correctPick == null
+                    ? (u.reason || '')
+                    : ''
+        }))
+    );
+
+    console.log(
+        `Baseline PicksLeft: ${plan.baseline} | ` +
+        `Selections: ${plan.selectionCount} | ` +
+        `Incorrect: ${plan.incorrect} | ` +
+        `Missed: ${plan.missedPicks} | ` +
+        `Total Lost: ${plan.picksLost} | ` +
+        `Next Week: ${plan.nextWeekPicksLeft}\n`
+    );
+}
+
+function testStandingsLogic() {
+    const testStandings = [
+        {
+            Username: 'User A',
+            PicksLeft: 5,
+            LastPickLostWeek: 2
+        },
+        {
+            Username: 'User B',
+            PicksLeft: 5,
+            LastPickLostWeek: 6
+        },
+        {
+            Username: 'User C',
+            PicksLeft: 5,
+            LastPickLostWeek: 4
+        }
+    ];
+
+    sortStandings(testStandings);
+
+    const rankedStandings =
+        assignStandingsPositions(testStandings);
+
+    console.table(
+        rankedStandings.map(standing => ({
+            Position: standing.Position,
+            Username: standing.Username,
+            PicksLeft: standing.PicksLeft,
+            LastPickLostWeek:
+                standing.LastPickLostWeek ?? 'Never'
+        }))
     );
 }
 
@@ -2426,21 +3690,70 @@ function startCli() {
     });
 
     // Tiny Helpers: Scoped to the CLI
-    function printAllUsersPlanSummary(bundle, sampleCount = 3) {
-        console.log(`\nPlan - week=${bundle.lastWeek}, users=${bundle.totalUsers}`);
-        const drops = bundle.plans.filter(p => p.incorrect > 0).length;
-        console.log(`Users with ≥1 incorrect: ${drops}/${bundle.totalUsers}`);
+    function printAllUsersPlanSummary(
+        bundle,
+        sampleCount = 3
+    ) {
+        console.log(
+            `\nPlan - week=${bundle.processedWeek}, ` +
+            `users=${bundle.totalUsers}`
+        );
 
-        const sample = bundle.plans.slice(0, sampleCount);
+        const usersLosingPicks =
+            bundle.plans.filter(
+                p => p.picksLost > 0
+            ).length;
+
+        const totalPicksLost =
+            bundle.plans.reduce(
+                (total, p) =>
+                    total + p.picksLost,
+                0
+            );
+
+        const usersWithMissedPicks =
+            bundle.plans.filter(
+                p => p.missedPicks > 0
+            ).length;
+
+        console.log(
+            `Users losing ≥1 pick: ` +
+            `${usersLosingPicks}/${bundle.totalUsers}`
+        );
+
+        console.log(
+            `Users with missed selections: ` +
+            `${usersWithMissedPicks}`
+        );
+
+        console.log(
+            `Total picks lost: ${totalPicksLost}`
+        );
+
+        const sample =
+            bundle.plans.slice(
+                0,
+                sampleCount
+            );
+
         if (sample.length) {
             console.log('\nSample:');
+
             sample.forEach((p, i) => {
                 console.log(
-                    ` ${i+1}. user=${p.userID} group=${p.groupID} ` +
-                    `baseline=${p.baseline} incorrect=${p.incorrect} next=${p.nextWeekPicksLeft}`
+                    ` ${i + 1}. ` +
+                    `user=${p.userID} ` +
+                    `group=${p.groupID} ` +
+                    `baseline=${p.baseline} ` +
+                    `selected=${p.selectionCount} ` +
+                    `incorrect=${p.incorrect} ` +
+                    `missed=${p.missedPicks} ` +
+                    `lost=${p.picksLost} ` +
+                    `next=${p.nextWeekPicksLeft}`
                 );
             });
         }
+
         console.log('');
     }
 
@@ -2454,88 +3767,262 @@ function startCli() {
     // --- Commands ---
     const commands = {
         // DRY-RUN for one user - NEVER WRITES
-        async checkUserPicks(userID, groupID, weekMaybe) {
+        async checkUserPicks(
+            userID,
+            groupID,
+            weekMaybe
+        ) {
             if (!userID || !groupID) {
-                console.log('Usage: checkUserPicks <userID> <groupID> [week]');
-                return;
-            }
-            const week = /^\d+$/.test(weekMaybe) ? Number(weekMaybe) : undefined;
-            const plan = await planUserChecks(userID, groupID, week);
+                console.log(
+                    'Usage: checkUserPicks ' +
+                    '<userID> <groupID> [week]'
+                );
 
-            console.log(`\nDRY-RUN — user=${userID}, group=${groupID}, lastWeek=${plan.lastWeek}`);
-            if (plan.selectionCount === 0) {
-                console.log('No selections found for that user/group/week.');
                 return;
             }
-            console.table(
-                plan.updates.map(u => ({
-                    GameID: u.row.GameID,
-                    PickedTeam: u.row.PickedTeam,
-                    WouldSet_selection_correct: u.correctPick,
-                    Note: u.correctPick == null ? (u.reason || '') : ''
-                }))
-            );
+
+            const week =
+                /^\d+$/.test(weekMaybe)
+                    ? Number(weekMaybe)
+                    : undefined;
+
+            const plan =
+                await planUserChecks(
+                    userID,
+                    groupID,
+                    week
+                );
+
             console.log(
-                `Baseline PicksLeft: ${plan.baseline} | Incorrect this week: ${plan.incorrect} | ` +
-                `Next week's PicksLeft (computed): ${plan.nextWeekPicksLeft}\n`
+                `\nDRY-RUN — ` +
+                `user=${userID}, ` +
+                `group=${groupID}, ` +
+                `week=${plan.processedWeek}`
+            );
+
+            if (plan.selectionCount > 0) {
+                console.table(
+                    plan.updates.map(u => ({
+                        GameID: u.row.GameID,
+                        PickedTeam:
+                            u.row.PickedTeam,
+
+                        WouldSet_selection_correct:
+                            u.correctPick,
+
+                        Note:
+                            u.correctPick == null
+                                ? (u.reason || '')
+                                : ''
+                    }))
+                );
+            } else {
+                console.log(
+                    'No selections were made.'
+                );
+            }
+
+            console.log(
+                `Baseline PicksLeft: ${plan.baseline} | ` +
+                `Selections made: ${plan.selectionCount} | ` +
+                `Incorrect: ${plan.incorrect} | ` +
+                `Missed: ${plan.missedPicks} | ` +
+                `Total lost: ${plan.picksLost} | ` +
+                `Next week's PicksLeft: ` +
+                `${plan.nextWeekPicksLeft}\n`
             );
         },
 
         // DRY_RUN for all users - PREVIEW ONLY
         async checkAllPicks(weekMaybe) {
-            const week = /^\d+$/.test(weekMaybe) ? Number(weekMaybe) : undefined;
-            const bundle = await planAllUsersChecks(week);
-            printAllUsersPlanSummary(bundle, 58);
-            console.log('DRY-RUN only. Use: applyAllPicks [week] to commit.\n');
+            const week =
+                /^\d+$/.test(weekMaybe)
+                    ? Number(weekMaybe)
+                    : undefined;
+
+            const bundle =
+                await planAllUsersChecks(week);
+
+            printAllUsersPlanSummary(
+                bundle,
+                58
+            );
+
+            console.log(
+                'DRY-RUN only. ' +
+                'Use: applyAllPicks [week] to commit.\n'
+            );
         },
 
         // Show Plan -> Confirm -> Write for all users (transaction)
         async applyAllPicks(weekMaybe) {
-            const week = /^\d+$/.test(weekMaybe) ? Number(weekMaybe) : undefined;
+            const week =
+                /^\d+$/.test(weekMaybe)
+                    ? Number(weekMaybe)
+                    : undefined;
 
-            // 1) Build Plan (dry-run)
-            const bundle = await planAllUsersChecks(week);
 
-            // 2) Show Plan Summary (and one detailed user)
-            printAllUsersPlanSummary(bundle, 5);
-            if (bundle.plans[0]) {
-                const p = bundle.plans[0];
-                console.log('First user detailed view:');
-                console.table(
-                    p.updates.map(u => ({
-                        GameID: u.row.GameID,
-                        PickedTeam: u.row.PickedTeam,
-                        WouldSet_selection_correct: u.correctPick,
-                        Note: u.correctPick == null ? (u.reason || '') : ''
-                    }))
+            // 1. Build plan
+            const bundle =
+                await planAllUsersChecks(week);
+
+
+            // 2. Show summary
+            printAllUsersPlanSummary(
+                bundle,
+                5
+            );
+
+
+            // 3. Check for unresolved games
+            const unresolved =
+                getUnresolvedSelections(bundle);
+
+            if (unresolved.length > 0) {
+                console.log(
+                    `\n❌ Cannot commit. ` +
+                    `${unresolved.length} selections ` +
+                    `could not be checked.`
                 );
-            }
 
-            // 3) Confirm
-            const ok = await confirmPrompt('Commit these changes to the database?');
-            if (!ok) {
-                console.log('Aborted by user.');
+                console.table(unresolved);
+
                 return;
             }
 
-            // 4) Commit exactly what was planned
+
+            // 4. Show one detailed user
+            if (bundle.plans[0]) {
+                const p =
+                    bundle.plans[0];
+
+                console.log(
+                    'First user detailed view:'
+                );
+
+                if (p.updates.length) {
+                    console.table(
+                        p.updates.map(u => ({
+                            GameID:
+                                u.row.GameID,
+
+                            PickedTeam:
+                                u.row.PickedTeam,
+
+                            WouldSet_selection_correct:
+                                u.correctPick,
+
+                            Note:
+                                u.correctPick == null
+                                    ? (u.reason || '')
+                                    : ''
+                        }))
+                    );
+                } else {
+                    console.log(
+                        'No selections for this user.'
+                    );
+                }
+
+                console.log(
+                    `baseline=${p.baseline} ` +
+                    `selected=${p.selectionCount} ` +
+                    `incorrect=${p.incorrect} ` +
+                    `missed=${p.missedPicks} ` +
+                    `lost=${p.picksLost} ` +
+                    `next=${p.nextWeekPicksLeft}`
+                );
+            }
+
+
+            // 5. Confirm
+            const ok =
+                await confirmPrompt(
+                    'Commit these changes to the database?'
+                );
+
+            if (!ok) {
+                console.log(
+                    'Aborted by user.'
+                );
+
+                return;
+            }
+
+
+            // 6. Commit exact plan
             await commitAllUsersChecks(bundle);
         },
 
         async undoAllPicks(weekMaybe) {
-            const week = /^\d+$/.test(weekMaybe) ? Number(weekMaybe) : undefined;
+            const week =
+                /^\d+$/.test(weekMaybe)
+                    ? Number(weekMaybe)
+                    : undefined;
 
-            console.log('\n⚠️  This will undo the first bulk apply for a given week:');
-            console.log(' - Reset selection_correct to NULL for that week');
-            console.log(' - Delete tblPicksLeft rows for Week = week + 1 for affected users\n');
+            console.log(
+                '\n⚠️ This will undo the bulk apply for the given week:'
+            );
 
-            const ok = await confirmPrompt(`Are you sure you want to proceed${week ? ` for week ${week}` : ''}?`);
+            console.log(
+                ' - Reset selection_correct to NULL for that week'
+            );
+
+            console.log(
+                ' - Delete tblPicksLeft rows for the following week'
+            );
+
+            console.log(
+                ' - Delete tblStandingsHistory rows for the following week\n'
+            );
+
+            const ok =
+                await confirmPrompt(
+                    `Are you sure you want to proceed` +
+                    `${week ? ` for week ${week}` : ''}?`
+                );
+
             if (!ok) {
-                console.log('Aborted by user.');
+                console.log(
+                    'Aborted by user.'
+                );
+
                 return;
             }
 
             await undoAllPicksRun(week);
+        },
+
+        async checkStandings(groupID, weekMaybe) {
+            if (!groupID) {
+                console.log(
+                    'Usage: checkStandings <groupID> [week]'
+                );
+
+                return;
+            }
+
+            const week =
+                /^\d+$/.test(weekMaybe)
+                    ? Number(weekMaybe)
+                    : undefined;
+
+            if (!week) {
+                console.log(
+                    'Please provide a standings week.'
+                );
+
+                return;
+            }
+
+            await previewGroupStandings(
+                groupID,
+                week
+            );
+        },
+
+        testStandings() {
+            testStandingsLogic();
         },
 
         help() {
@@ -2544,8 +4031,10 @@ function startCli() {
             console.log(' checkAllPicks [week]                      - Dry-run for all users (no writes)');
             console.log(' applyAllPicks [week]                      - Plan and commit for all users');
             console.log(' undoAllPicks [week]                       - Undo the first bulk apply for a given week');
+            console.log(' checkStandings <groupID> <week> - Preview standings for a group');
             console.log(' help                                      - Show this help message');
-            console.log(' exit                                      - Exit the CLI\n');
+            console.log(' exit                                      - Exit the CLI');
+            console.log(' testStandings                              - Test standings calculation with fake data');
         },
 
         exit() {

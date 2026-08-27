@@ -576,8 +576,8 @@
     <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.print.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        //const apiURL = 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net';
-        const apiURL = 'http://localhost:8080';
+        const apiURL = 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net';
+        //const apiURL = 'http://localhost:8080';
         // regex for email validation
         const regEmail = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/;
         
@@ -1226,7 +1226,7 @@
                     });
                 }
 
-                const userID = dataUsers.userID; // if you need it later
+                userID = dataUsers.userID; // if you need it later
 
                 // 2) Create session (login)
                 const resSess = await fetch(apiURL + '/sessions', {
@@ -1241,6 +1241,9 @@
                 const msg = dataSess.Error || dataSess.error || 'Could not create session.';
                 return Swal.fire({ title: "Login Error", text: msg, icon: "error" });
                 }
+
+                loadDashboardGreetings(userID);
+                loadDashboard();
 
                 // Success
                 sessionStorage.setItem('SessionID', dataSess.sessionid);

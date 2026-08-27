@@ -17,6 +17,9 @@
 
             <ul class="nav-menu">
                 <li class="nav-item">
+                    <a href="#" class="nav-link" id="navDashboard">Dashboard</a>
+                </li>
+                <li class="nav-item">
                     <a href="#" class="nav-link" id="navPicks">Make Picks</a>
                 </li>
                 <li class="nav-item">
@@ -44,7 +47,7 @@
     </header>
     <div class="d-flex flex-wrap col-12 col-md-8 col-lg-8 offset-md-2 offset-lg-2 justify-content-center align-items-center vh-100">
         <!-- Login Card -->
-        <div id="divLogin" class="card col-12 text-black" style="display: none;">
+        <div id="divLogin" class="card col-12 text-black app-page" style="display: none;">
             <div class="d-flex card-header justify-content-center">
                 <h3>Login To Battleship</h3>
             </div>
@@ -74,7 +77,7 @@
         </div>
 
         <!-- Forgot Password Card -->
-         <div id="divForgotPassword" class="card col-12 text-black" style="display: none;">
+         <div id="divForgotPassword" class="card col-12 text-black app-page" style="display: none;">
             <div class="d-flex card-header justify-content-center">
                 <h3>Forgot Password</h3>
             </div>
@@ -91,7 +94,7 @@
         </div>
         
         <!-- Register Card -->
-        <div id="divRegister" class="card col-12 text-black" style="display: none;">
+        <div id="divRegister" class="card col-12 text-black app-page" style="display: none;">
             <div class="d-flex card-header justify-content-center">
                 <h3>Register For Battleship</h3>
             </div>
@@ -117,8 +120,8 @@
             </div>
         </div>
 
-        <!-- Dashboard Card -->
-        <div id="divPicks" class="card col-12 text-black" style="display: none;">
+        <!-- Group Picks Card -->
+        <div id="divPicks" class="card col-12 text-black app-page" style="display: none;">
             <div class="d-flex card-header justify-content-center">
                 <h3>Welcome To Battleship</h3>
             </div>
@@ -161,7 +164,7 @@
         </div>
 
         <!-- Groups Card -->
-        <div id="divGroups" class="card col-12 text-black" style="display: none;">
+        <div id="divGroups" class="card col-12 text-black app-page" style="display: none;">
             <div class="d-flex card-header justify-content-center">
                 <h3>Groups</h3>
             </div>
@@ -226,7 +229,7 @@
         </div>
 
         <!-- About Card (About Game and Rules)-->
-        <div id="divAbout" class="card col-12 text-black" style="display: none;">
+        <div id="divAbout" class="card col-12 text-black app-page" style="display: none;">
             <div class="d-flex card-header justify-content-center">
                 <h2>About Battleship and How to Play</h3>
             </div>
@@ -267,12 +270,12 @@
         </div>
 
         <!-- Group Members Card-->
-        <div id="divGroupMembers" class="card col-12 text-black" style="display: none;">
+        <div id="divGroupMembers" class="card col-12 text-black app-page" style="display: none;">
             
         </div>
 
         <!-- Member Picks Card -->
-        <div id="divMemberPicks" class="card col-12 text-black" style="display: none;">
+        <div id="divMemberPicks" class="card col-12 text-black app-page" style="display: none;">
             <div class="card-header">
                 
             </div>
@@ -282,7 +285,7 @@
         </div>
 
         <!-- Make Picks Card -->
-        <div id="divMakePicks" class="card col-12 text-black" style="display: none;">
+        <div id="divMakePicks" class="card col-12 text-black app-page" style="display: none;">
 
             <div class="card-header position-relative text-center">
 
@@ -417,6 +420,146 @@
 
             </div>
         </div>
+
+        <div id="divDashboard" class="card app-page">
+            <div id="divDashboardHeader" class="dashboard-header">
+                <!-- Put "Hello [User]"-->
+                 <h3 id="dashboardGreeting"></h3>
+                <!-- Put user's groups here (Thinking about horizontal scrolling buttons that when clicked change the group information displayed)-->
+                <div id="divDashboardGroups">
+                    <!-- Group buttons will be generated here -->
+                </div>
+            </div>
+
+            <div id="divDashboardNoGroups" class="dashboard-no-groups" style="display: none;">
+                <div class="alert alert-info" role="alert">
+                    You aren't part of any groups yet. Create or join a group to get started.
+                </div>
+            </div>
+
+            <div id="divDashboardGrid">
+
+                <div
+                    id="divDashboardNotifications"
+                    data-widget-id="dashboardNotifications"
+                    class="dashboard-widget widget-full"
+                >
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <i class="bi bi-bell"></i>
+                            <span>Notifications</span>
+                        </div>
+
+                        <div class="widget-actions"></div>
+                    </div>
+
+                    <div class="widget-body">
+                    </div>
+                </div>
+
+
+                <div
+                    id="divDashboardSelections"
+                    data-widget-id="dashboardSelections"
+                    class="dashboard-widget widget-small"
+                >
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <i class="bi bi-list-check"></i>
+                            <span>Current Selections</span>
+                        </div>
+
+                        <div class="widget-actions"></div>
+                    </div>
+
+                    <div class="widget-body">
+                    </div>
+                </div>
+
+
+                <div
+                    id="divDashboardLeaderboard"
+                    data-widget-id="dashboardLeaderboard"
+                    class="dashboard-widget widget-large"
+                >
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <i class="bi bi-trophy"></i>
+                            <span>Leaderboard</span>
+                        </div>
+
+                        <div class="widget-actions"></div>
+                    </div>
+
+                    <div class="widget-body">
+                    </div>
+                </div>
+                
+                <div
+                    id="divDashboardGraphPicks"
+                    data-widget-id="dashboardGraphPicks"
+                    class="dashboard-widget widget-large"
+                >
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <i class="bi bi-graph-up"></i>
+                            <span>Picks Remaining</span>
+                        </div>
+
+                        <div class="widget-actions"></div>
+                    </div>
+
+                    <div class="widget-body">
+                        <div class="dashboard-picks-message"></div>
+
+                        <div class="dashboard-chart-container">
+                            <canvas id="chartDashboardPicks"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    id="divDashboardGroupLosses"
+                    data-widget-id="dashboardGroupLosses"
+                    class="dashboard-widget widget-small"
+                >
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <i class="bi bi-x-circle"></i>
+                            <span>Group's Losses</span>
+                        </div>
+
+                        <div class="widget-actions"></div>
+                    </div>
+
+                    <div class="widget-body">
+                    </div>
+                </div>
+
+                <div
+                    id="divDashboardGraphPosition"
+                    data-widget-id="dashboardGraphPosition"
+                    class="dashboard-widget widget-full"
+                >
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <i class="bi bi-bar-chart"></i>
+                            <span>Leaderboard Position</span>
+                        </div>
+
+                        <div class="widget-actions"></div>
+                    </div>
+
+                    <div class="widget-body">
+                        <div class="dashboard-position-message"></div>
+
+                        <div class="dashboard-chart-container">
+                            <canvas id="chartDashboardPosition"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
@@ -431,9 +574,10 @@
     <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.html5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/js/selectize.min.js" integrity="sha512-IOebNkvA/HZjMM7MxL0NYeLYEalloZ8ckak+NDtOViP7oiYzG5vn6WVXyrJDiJPhl4yRdmNAG49iuLmhkUdVsQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const apiURL = 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net';
-        //const apiURL = 'https://fort-portraits-memorial-toolbox.trycloudflare.com';
+        //const apiURL = 'https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net';
+        const apiURL = 'http://localhost:8080';
         // regex for email validation
         const regEmail = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/;
         
@@ -553,35 +697,47 @@
         // Display the groups in a table
         async function displayGroupsTable() {
             try {
-                const groups = await getGroups(); // Await the promise returned by getGroups
+                const groups = await getGroups();
 
-                // Fetching members for each group and appending rows
+                // If DataTable already exists, destroy it first
+                if ($.fn.DataTable.isDataTable('#tblGroups')) {
+                    $('#tblGroups').DataTable().destroy();
+                }
+
+                // Remove old rows
+                $('#tblGroups tbody').empty();
+
+                // Get members and build rows
                 for (const group of groups) {
-                    const result = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=${group.GroupID}`);
-                    const arrMembers = result.members;
-                    const numMembers = arrMembers.length;
+                    const result = await $.get(
+                        `https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=${group.GroupID}`
+                    );
+
+                    const numMembers = result.members.length;
 
                     const strRow = `
                         <tr data-value="${group.GroupID}">
                             <td>${group.GroupName}</td>
                             <td>${group.OwnerName}</td>
                             <td>${numMembers}</td>
-                        </tr>`;
+                        </tr>
+                    `;
+
                     $('#tblGroups tbody').append(strRow);
                 }
 
-                // Initialize DataTable after all rows are appended
+                // Reinitialize DataTable
                 $('#tblGroups').DataTable({
                     fixedHeader: true,
                     responsive: true,
                     columnDefs: [
                         {
                             targets: '_all',
-                            className: 'dt-head-center',
+                            className: 'dt-head-center'
                         },
                         {
                             targets: '_all',
-                            className: 'dt-body-center',
+                            className: 'dt-body-center'
                         }
                     ]
                 });
@@ -612,35 +768,49 @@
                 const groupsResult = await getYourGroups();
                 const groups = groupsResult.groups;
 
-                // Loop through each group and fetch additional data
-                for (const group of groups) {
-                    const groupInfo = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupByID?groupID=${group.GroupID}`);
-                    const result = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupmembers?groupID=${group.GroupID}`);
+                // Destroy existing DataTable if already initialized
+                if ($.fn.DataTable.isDataTable('#tblYourGroups')) {
+                    $('#tblYourGroups').DataTable().destroy();
+                }
 
-                    const arrMembers = result.members;
-                    const numMembers = arrMembers.length;
+                // Clear existing rows
+                $('#tblYourGroups tbody').empty();
+
+                // Fetch group info and members
+                for (const group of groups) {
+                    const groupInfo = await $.get(
+                        apiURL + `/groupByID?groupID=${group.GroupID}`
+                    );
+
+                    const result = await $.get(
+                        apiURL + `/groupmembers?groupID=${group.GroupID}`
+                    );
+
+                    const numMembers = result.members.length;
 
                     const strRow = `
                         <tr data-value="${group.GroupID}">
                             <td>${group.GroupName}</td>
                             <td>${groupInfo.OwnerName}</td>
                             <td>${numMembers}</td>
-                        </tr>`;
+                        </tr>
+                    `;
+
                     $('#tblYourGroups tbody').append(strRow);
                 }
 
-                // Initialize DataTable after all rows are appended
+                // Reinitialize DataTable
                 $('#tblYourGroups').DataTable({
                     fixedHeader: true,
                     responsive: true,
                     columnDefs: [
                         {
                             targets: '_all',
-                            className: 'dt-head-center',
+                            className: 'dt-head-center'
                         },
                         {
                             targets: '_all',
-                            className: 'dt-body-center',
+                            className: 'dt-body-center'
                         }
                     ]
                 });
@@ -830,9 +1000,11 @@
 
                     displayPicksGroups();
                     displayYourGroups();
+                    loadDashboardGreetings(userID);
+                    loadDashboard();
                 });
 
-                $('#divPicks').slideToggle();
+                $('#divDashboard').slideToggle();
             } else {
                 $('#divAbout').slideToggle();
             }
@@ -901,8 +1073,11 @@
                         localStorage.removeItem('SessionID');
                     }
 
+                    displayGroupsTable();
                     displayPicksGroups();
                     displayYourGroups();
+                    loadDashboardGreetings(userID);
+                    loadDashboard();
 
                     Swal.fire({
                         title: 'Success',
@@ -911,7 +1086,7 @@
                     });
 
                     $('#divLogin').slideToggle(function () {
-                        $('#divPicks').slideToggle();
+                        $('#divDashboard').slideToggle();
                     });
                 },
 
@@ -1070,7 +1245,7 @@
                 // Success
                 sessionStorage.setItem('SessionID', dataSess.sessionid);
                 await Swal.fire({ title: "Success", text: "User and Session Created", icon: "success" });
-                $('#divRegister').slideToggle(function () { $('#divPicks').slideToggle(); });
+                $('#divRegister').slideToggle(function () { $('#divDashboard').slideToggle(); });
 
             } catch (err) {
                 console.error(err);
@@ -1142,6 +1317,16 @@
             })
         })
 
+        // Go to Dashboard from anywhere
+        $('#navDashboard').on('click', function(e){
+            e.preventDefault(); // Prevent the default link behavior
+            // Slide up the current card (if it's not already hidden)
+            $('.card:visible').slideUp(function(){
+                // Slide down the dashboard card
+                $('#divDashboard').slideDown();
+            });
+        });
+
         // Go to Picks from anywhere
         $('#navPicks').on('click', function(e){
             e.preventDefault(); // Prevent the default link behavior
@@ -1151,7 +1336,7 @@
                 // Slide up the current card (if it's not already hidden)
                 $('.card:visible').slideUp(function(){
                     // Slide down the dashboard card
-                    location.reload();
+                    $('#divPicks').slideDown();
                 });
             } else {
                 Swal.fire({
@@ -1348,9 +1533,12 @@
                                             let arrMembers = groupMembers.members;
                                             let numMembers = arrMembers.length;
                                             $.get(apiURL + '/groupOwner?groupID=' + result.groupID, function(owner){
-                                                addGroupRow(result.groupName, owner.owner, numMembers);
-                                                addYourGroupRow(result.groupName, owner.owner, numMembers);
+                                                displayGroupsTable();
+                                                displayYourGroups();
+                                                //addGroupRow(result.groupName, owner.owner, numMembers);
+                                                //addYourGroupRow(result.groupName, owner.owner, numMembers);
                                                 addToPicksGroups(result.groupName, owner.owner);
+                                                loadDashboard();
                                             })
                                         })
                                     } else {
@@ -1360,6 +1548,24 @@
                                             icon: 'success'
                                         });
                                     }
+                                    formData = {
+                                        groupID: result.groupID,
+                                        userID: userID,
+                                        week: 1,
+                                        picksLeft: 7
+                                    };
+                                    $.get(apiURL + '/groupmembers?groupID=' + result.groupID, function(groupMembers){
+                                        let arrMembers = groupMembers.members;
+                                        let numMembers = arrMembers.length;
+                                        $.get(apiURL + '/groupOwner?groupID=' + result.groupID, function(owner){
+                                            displayGroupsTable();
+                                            displayYourGroups();
+                                            //addGroupRow(result.groupName, owner.owner, numMembers);
+                                            //addYourGroupRow(result.groupName, owner.owner, numMembers);
+                                            addToPicksGroups(result.groupName, owner.owner);
+                                            loadDashboard();
+                                        })
+                                    })
                                 })
                                 let postData = {
                                     groupID: result.groupID,
@@ -1451,8 +1657,11 @@
                                                                 text: 'You have successfully joined the group "' + strGroupName + '"!',
                                                                 icon: 'success'
                                                             });
-                                                            addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
+                                                            displayGroupsTable();
+                                                            displayYourGroups();
+                                                            //addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
                                                             addToPicksGroups(strGroupName, strOwnerName);
+                                                            loadDashboard();
                                                             let postData = {
                                                                 groupID: strGroupID,
                                                                 userID: userID
@@ -1477,8 +1686,11 @@
                                                         text: 'You have successfully joined the group "' + strGroupName + '"!',
                                                         icon: 'success'
                                                     });
-                                                    addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
+                                                    displayGroupsTable();
+                                                    displayYourGroups();
+                                                    //addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
                                                     addToPicksGroups(strGroupName, strOwnerName)
+                                                    loadDashboard();
                                                     let postData = {
                                                         groupID: strGroupID,
                                                         userID: userID
@@ -2251,6 +2463,8 @@
 
             matchupContainer.empty();
 
+            console.log(preparedGameData);
+
             preparedGameData.forEach((game) => {
                 const formattedDateTime = formatGameDateTime(game.startDate);
 
@@ -3005,6 +3219,880 @@
             });
 
         });
+
+        /* ============================== 
+            Dashboard Page Functionality
+           ============================== */
+
+        let dashboardGroupID = null;
+        let dashboardPositionChart = null;
+
+        async function loadDashboard() {
+            console.log(userID);
+            $.get(apiURL + '/groupsByUserID?userID=' + userID, function(result) {
+                const groups = result.groups;
+                console.log(groups);
+
+                renderDashboardGroups(groups);
+
+                if (groups.length > 0) {
+                    dashboardGroupID = groups[0].GroupID;
+
+                    $('#divDashboardGrid').show();
+                    $('#divDashboardNoGroups').hide();
+
+                    loadDashboardContent(dashboardGroupID);
+                } else {
+                    dashboardGroupID = null;
+
+                    $('#divDashboardGrid').hide();
+                    $('#divDashboardNoGroups').show();
+                }
+            });
+        }
+        
+        function renderDashboardGroups(groups) {
+            groupButtons = '';
+            groups.forEach((group, index) => {
+                const buttonClass = index === 0
+                    ? 'btn-primary'
+                    : 'btn-outline-primary';
+
+                groupButtons += `
+                    <button
+                        type="button"
+                        class="btn ${buttonClass} dashboard-group-btn"
+                        data-group-id="${group.GroupID}"
+                    >
+                        ${group.GroupName}
+                    </button>
+                `;
+            });
+            $('#divDashboardGroups').html(groupButtons);
+        }
+
+        $(document).on('click', '.dashboard-group-btn', function () {
+
+            const groupID = $(this).data('group-id');
+
+            dashboardGroupID = groupID;
+
+            // Remove selected appearance from all buttons
+            $('.dashboard-group-btn')
+                .removeClass('btn-primary')
+                .addClass('btn-outline-primary');
+
+            // Give clicked button selected appearance
+            $(this)
+                .removeClass('btn-outline-primary')
+                .addClass('btn-primary');
+
+            loadDashboardContent(groupID);
+        });
+
+        async function loadDashboardContent(groupID){
+            console.log('Loading dashboard content for groupID:', groupID);
+
+            try {
+                const results = await Promise.allSettled([
+                    loadDashboardNotifications(groupID),
+                    loadDashboardSelections(groupID),
+                    loadDashboardLeaderboard(groupID),
+                    loadDashboardLastWeek(groupID),
+                    loadDashboardPicksGraph(groupID),
+                    loadDashboardPositionGraph(groupID)
+                ])
+
+                results.forEach(result => {
+                    if (result.status === 'rejected') {
+                        console.error(result.reason);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading dashboard content:', error);
+            }
+        }
+
+        async function loadDashboardGreetings(userID) {
+            try {
+                const userResult = await $.get(
+                    apiURL + '/user?userID=' + userID
+                );
+
+                const username = userResult.username;
+
+                const currentHour = new Date().getHours();
+
+                let greeting = 'Hello';
+
+                if (currentHour < 12) {
+                    greeting = 'Good morning';
+                } else if (currentHour < 18) {
+                    greeting = 'Good afternoon';
+                } else {
+                    greeting = 'Good evening';
+                }
+
+                $('#dashboardGreeting').html(`
+                    <h3>${greeting}, ${username}!</h3>
+                `);
+
+            } catch (error) {
+                console.error(
+                    'Error loading dashboard greeting:',
+                    error
+                );
+
+                $('#dashboardGreeting').html(`
+                    <h3>Welcome!</h3>
+                `);
+            }
+        }
+
+        async function loadDashboardNotifications(groupID) {
+            try {
+                const [picksLeft, selections] = await Promise.all([
+                    $.get(
+                        apiURL +
+                        '/picksLeft?userID=' +
+                        userID +
+                        '&groupID=' +
+                        groupID
+                    ),
+
+                    $.get(
+                        apiURL +
+                        '/selection?userID=' +
+                        userID +
+                        '&groupID=' +
+                        groupID
+                    )
+                ]);
+
+                const selectionsMade =
+                    selections.selections?.length ?? 0;
+
+                const actualPicksLeft = Math.max(
+                    0,
+                    picksLeft.picksLeft - selectionsMade
+                );
+
+                renderDashboardNotifications(actualPicksLeft);
+
+            } catch (error) {
+                console.error(
+                    'Error loading dashboard notifications:',
+                    error
+                );
+
+                $('#divDashboardNotifications .widget-body').html(`
+                    <div class="alert alert-danger" role="alert">
+                        Failed to load notifications.
+                    </div>
+                `);
+            }
+        }
+
+        /* 
+            Function to render notifications on the dashboard
+            - Currently only has 1 notification
+            - Potential Notifications to add later:
+                - User's Leaderboard Movement from this week to previous week
+        */
+        function renderDashboardNotifications(picksLeft) {
+            const $notificationContainer = $('#divDashboardNotifications .widget-body');
+            $notificationContainer.empty();
+
+            if (picksLeft > 0) {
+                $notificationContainer.append(`
+                    <div class="alert alert-warning" role="alert">
+                        You still have <strong>${picksLeft}</strong>
+                        ${picksLeft === 1 ? 'selection' : 'selections'} to make.
+                        Please make your picks before the games start!
+                    </div>
+                `);
+            } else {
+                $notificationContainer.append(`
+                    <div class="alert alert-success" role="alert">
+                        All picks have been made for this week. Good luck!
+                    </div>
+                `);
+            }
+        }
+
+        async function loadDashboardSelections(groupID) {
+            try {
+                const selectionsData = await $.get(
+                    apiURL +
+                    '/selection?userID=' +
+                    userID +
+                    '&groupID=' +
+                    groupID
+                );
+
+                const userSelections =
+                    selectionsData.selections ?? [];
+
+                renderDashboardSelections(userSelections);
+
+            } catch (error) {
+                console.error(
+                    'Error loading dashboard selections:',
+                    error
+                );
+
+                $('#divDashboardSelections .widget-body').html(`
+                    <div class="alert alert-danger" role="alert">
+                        Failed to load your selections.
+                    </div>
+                `);
+            }
+        }
+
+        function renderDashboardSelections(selections) {
+            // Render the user's selections for the current week in the dashboard selections widget
+            const $selectionContainer = $('#divDashboardSelections .widget-body');
+            $selectionContainer.empty();
+
+            console.log(selections);
+
+            if (selections.length === 0) {
+                $selectionContainer.append(`
+                    <div class="alert alert-info" role="alert">
+                        You have not made any selections for this week yet.
+                    </div>
+                `);
+            } else {
+                selections.forEach(selection => {
+                    $selectionContainer.append(`
+                        <div class="dashboard-selection-item">
+                            <strong>${selection.PickedTeam}</strong>
+                        </div>
+                    `);
+                });
+            }
+        }
+
+        async function loadDashboardLeaderboard(groupID) {
+            try {
+                // Get the leaderboard for the current group
+                const leaderboardData = await $.get(
+                    apiURL +
+                    '/dashboard/currentStandingsByGroup?groupID=' +
+                    groupID
+                );
+
+                // Render the leaderboard
+                renderDashboardLeaderboard(leaderboardData);
+
+            } catch (error) {
+                console.error(
+                    'Error loading dashboard leaderboard:',
+                    error
+                );
+
+                $('#divDashboardLeaderboard .widget-body').html(`
+                    <div class="alert alert-danger" role="alert">
+                        Failed to load leaderboard.
+                    </div>
+                `);
+            }
+        }
+
+        // Function to render the leaderboard on the dashboard
+        //   - Display the top 5 users in the group with their picksLeft and positional change from the previous week
+        //   - If the user is not in the top 5, display their position at the bottom of the leaderboard after a divider
+        function renderDashboardLeaderboard(data) {
+            console.log(data);
+            const $leaderboardContainer = $('#divDashboardLeaderboard .widget-body');
+            $leaderboardContainer.empty();
+
+            if (data.HasStandings === false) {
+                $leaderboardContainer.append(`
+                    <div class="alert alert-info" role="alert">
+                        No leaderboard data available for this group yet.
+                    </div>
+                `);
+
+                return;
+            }
+
+            // ------------------------------------------------
+            // Determine which users should appear
+            // ------------------------------------------------
+            function getLeaderboardUsers(standings) {
+                if (!standings || standings.length === 0) {
+                    return {
+                        users: [],
+                        hiddenTiedUsers: 0,
+                        cutoffPosition: null
+                    };
+                }
+
+                // If there are 5 or fewer users,
+                // just show everyone.
+                if (standings.length <= 5) {
+                    return {
+                        users: standings,
+                        hiddenTiedUsers: 0,
+                        cutoffPosition: standings[standings.length - 1].Position
+                    };
+                }
+
+                // The 5th user's position determines the cutoff.
+                const cutoffPosition = standings[4].Position;
+
+                // Include everyone whose position is at or above
+                // the 5th user's position.
+                const qualifyingUsers = standings.filter(
+                    user => user.Position <= cutoffPosition
+                );
+
+                // Maximum of 10 users displayed.
+                const users = qualifyingUsers.slice(0, 10);
+
+                // Anyone beyond 10 is part of the same cutoff group.
+                const hiddenTiedUsers = Math.max(
+                    0,
+                    qualifyingUsers.length - users.length
+                );
+
+                return {
+                    users,
+                    hiddenTiedUsers,
+                    cutoffPosition
+                };
+            }
+
+
+            // ------------------------------------------------
+            // Position change indicator
+            // ------------------------------------------------
+            function getPositionChangeHTML(positionChange) {
+                if (positionChange === null || positionChange === 0) {
+                    return `
+                        <span class="dashboard-position-change text-muted">
+                            <i class="bi bi-dash"></i>
+                        </span>
+                    `;
+                }
+
+                if (positionChange > 0) {
+                    return `
+                        <span class="dashboard-position-change text-success">
+                            <i class="bi bi-caret-up-fill"></i>
+                            ${positionChange}
+                        </span>
+                    `;
+                }
+
+                return `
+                    <span class="dashboard-position-change text-danger">
+                        <i class="bi bi-caret-down-fill"></i>
+                        ${Math.abs(positionChange)}
+                    </span>
+                `;
+            }
+
+
+            // ------------------------------------------------
+            // Render a single leaderboard row
+            // ------------------------------------------------
+            function renderLeaderboardItem(user, isCurrentUser = false) {
+                const positionChangeHTML =
+                    getPositionChangeHTML(user.PositionChange);
+
+                return `
+                    <div class="
+                        dashboard-leaderboard-item
+                        ${isCurrentUser ? 'dashboard-leaderboard-current-user' : ''}
+                    ">
+                        <div class="dashboard-leaderboard-rank">
+
+                            <span class="dashboard-leaderboard-position">
+                                ${user.Position}
+                            </span>
+
+                            ${positionChangeHTML}
+
+                        </div>
+
+                        <span class="dashboard-leaderboard-username">
+                            ${user.Username}
+                        </span>
+
+                        <span class="dashboard-leaderboard-picks-left">
+                            ${user.PicksLeft} picks left
+                        </span>
+                    </div>
+                `;
+            }
+
+
+            // ------------------------------------------------
+            // Get leaderboard users
+            // ------------------------------------------------
+            const {
+                users: leaderboardUsers,
+                hiddenTiedUsers,
+                cutoffPosition
+            } = getLeaderboardUsers(data.Standings);
+
+
+            // Check whether logged-in user is already displayed
+            const userInLeaderboard = leaderboardUsers.some(
+                user => user.UserID === userID
+            );
+
+
+            // ------------------------------------------------
+            // Render leaderboard
+            // ------------------------------------------------
+            leaderboardUsers.forEach(user => {
+                $leaderboardContainer.append(
+                    renderLeaderboardItem(
+                        user,
+                        user.UserID === userID
+                    )
+                );
+            });
+
+
+            // ------------------------------------------------
+            // Show hidden tie count
+            // ------------------------------------------------
+            if (hiddenTiedUsers > 0) {
+                $leaderboardContainer.append(`
+                    <div class="dashboard-leaderboard-more-tied">
+                        +${hiddenTiedUsers} more tied at #${cutoffPosition}
+                    </div>
+                `);
+            }
+
+
+            // ------------------------------------------------
+            // If logged-in user isn't shown,
+            // display their position below leaderboard
+            // ------------------------------------------------
+            if (!userInLeaderboard) {
+                const currentUser = data.Standings.find(
+                    user => user.UserID === userID
+                );
+
+                if (currentUser) {
+                    $leaderboardContainer.append(`
+                        <div class="dashboard-leaderboard-divider">
+                            <span>•••</span>
+                        </div>
+                    `);
+
+                    $leaderboardContainer.append(
+                        renderLeaderboardItem(
+                            currentUser,
+                            true
+                        )
+                    );
+                }
+            }
+        }
+
+        async function loadDashboardLastWeek(groupID) {
+            // First getdata for last week, then render it in the dashboard last week widget
+            try {
+                const lastWeekData = await $.get(apiURL + '/dashboard/groupLossesSummary?groupID=' + groupID);
+                // Render the last week data in the dashboard widget
+                renderDashboardLastWeek(lastWeekData);
+            } catch (error) {
+                console.error('Error loading dashboard last week data:', error);
+                $('#divDashboardLastWeek .widget-body').html(`
+                    <div class="alert alert-danger" role="alert">
+                        Failed to load last week data.
+                    </div>
+                `);
+            }
+        }
+
+        function renderDashboardLastWeek(data) {
+            $body = $('#divDashboardGroupLosses .widget-body');
+            $body.empty();
+
+            // If there is no data for last week, show a message (Mainly for Week 1, since there are no losses yet)
+            if (data.Week === null) {
+                $body.append(`
+                    <div class="alert alert-info" role="alert">
+                        Group losses will be available after Week 1 is complete.
+                    </div>
+                `);
+                return;
+            }
+
+            // If there are no losses for this group in the last week, show a message
+            if (data.HasLosses === false) {
+                $body.append(`
+                    <div class="alert alert-success" role="alert">
+                        No picks were lost in this group in Week ${data.Week}!.
+                    </div>
+                `);
+                return;
+            }
+
+            /* Render the losses for the last week */
+            // Show the 5 most picked teams that lost in the last week, along with the number of picks lost for each team
+            function getDisplayedTeams(teams) {
+                // If 5 or fewer teams, show all
+                if (teams.length <= 5) {
+                    return {
+                        displayedTeams: teams,
+                        hiddenTeamsCount: 0
+                    };
+                }
+
+                // Pick count of the 5th team
+                const cutoffPickCount = teams[4].PickCount;
+
+                // Include all teams tied with the 5th team
+                const qualifyingTeams = teams.filter(
+                    team => team.PickCount >= cutoffPickCount
+                );
+
+                // Show no more than 10 teams
+                const displayedTeams = qualifyingTeams.slice(0, 10);
+
+                // Count any qualifying teams hidden beyond 10
+                const hiddenTeamsCount = Math.max(
+                    0,
+                    qualifyingTeams.length - displayedTeams.length
+                );
+
+                return {
+                    displayedTeams,
+                    hiddenTeamsCount
+                };
+            }
+
+
+            function renderTeamLossItem(team) {
+                return `
+                    <div class="dashboard-last-week-team-loss">
+                        <span class="dashboard-last-week-team-name">
+                            ${team.PickedTeam}
+                        </span>
+
+                        <span class="dashboard-last-week-team-count">
+                            ${team.PickCount}
+                            ${team.PickCount === 1 ? 'pick' : 'picks'} lost
+                        </span>
+                    </div>
+                `;
+            }
+
+
+            const {
+                displayedTeams,
+                hiddenTeamsCount
+            } = getDisplayedTeams(data.Losses);
+
+
+            // Summary
+            $body.append(`
+                <div class="dashboard-last-week-summary">
+                    <strong>${data.UsersWithLosses}</strong>
+                    ${data.UsersWithLosses === 1 ? 'user' : 'users'}
+                    lost
+                    <strong>${data.TotalLostPicks}</strong>
+                    ${data.TotalLostPicks === 1 ? 'pick' : 'picks'}.
+                </div>
+            `);
+
+
+            // Display teams
+            displayedTeams.forEach(team => {
+                $body.append(
+                    renderTeamLossItem(team)
+                );
+            });
+
+
+            // Show if additional tied teams were hidden
+            if (hiddenTeamsCount > 0) {
+                $body.append(`
+                    <div class="dashboard-last-week-more-tied">
+                        +${hiddenTeamsCount} more tied
+                    </div>
+                `);
+            }
+        }   
+
+        async function loadDashboardPicksGraph(groupID) {
+            try {
+                const picksLeftData = await $.get(
+                    apiURL +
+                    '/picksLeftByWeek?userID=' +
+                    userID +
+                    '&groupID=' +
+                    groupID
+                );
+
+                const picksLeftArray =
+                    picksLeftData.picksLeftArray ?? [];
+
+                renderDashboardPicksGraph(picksLeftArray);
+
+            } catch (error) {
+                console.error(
+                    'Error loading dashboard picks graph:',
+                    error
+                );
+
+                $('#divDashboardGraphPicks .widget-body').html(`
+                    <div class="alert alert-danger" role="alert">
+                        Failed to load picks history.
+                    </div>
+                `);
+            }
+        }
+
+        let dashboardPicksChart = null;
+
+        function renderDashboardPicksGraph(data) {
+            const $body =
+                $('#divDashboardGraphPicks .widget-body');
+
+            const $message =
+                $body.find('.dashboard-picks-message');
+
+            const $chartContainer =
+                $body.find('.dashboard-chart-container');
+
+            // Clear any previous message
+            $message.empty();
+
+            // No data
+            if (!data || data.length === 0) {
+                if (dashboardPicksChart) {
+                    dashboardPicksChart.destroy();
+                    dashboardPicksChart = null;
+                }
+
+                $chartContainer.hide();
+
+                $message.html(`
+                    <div class="alert alert-info" role="alert">
+                        No picks history available for this group yet.
+                    </div>
+                `);
+
+                return;
+            }
+
+            // Data exists
+            $chartContainer.show();
+
+            const canvas =
+                document.getElementById('chartDashboardPicks');
+
+            if (!canvas) {
+                console.error(
+                    'chartDashboardPicks canvas not found'
+                );
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+
+            if (dashboardPicksChart) {
+                dashboardPicksChart.destroy();
+            }
+
+            dashboardPicksChart = new Chart(ctx, {
+                type: 'line',
+
+                data: {
+                    labels: data.map(item => item.Week),
+
+                    datasets: [{
+                        label: 'Picks Remaining',
+                        data: data.map(item => item.PicksLeft),
+                        tension: 0.3
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Week'
+                            },
+
+                            ticks: {
+                                precision: 0
+                            }
+                        },
+
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 7,
+
+                            title: {
+                                display: true,
+                                text: 'Picks Remaining'
+                            },
+
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadDashboardPositionGraph(groupID) {
+            try {
+                // Get the user's position history for this group
+                const positionHistory = await $.get(
+                    apiURL +
+                    '/dashboard/allStandingsByUser?userID=' +
+                    userID +
+                    '&groupID=' +
+                    groupID
+                );
+
+                console.log(positionHistory);
+
+                // Render the graph once the request has completed
+                renderDashboardPositionGraph(positionHistory);
+
+            } catch (error) {
+                console.error(
+                    'Error loading dashboard position history:',
+                    error
+                );
+
+                const $body =
+                    $('#divDashboardGraphPosition .widget-body');
+
+                $body.html(`
+                    <div class="alert alert-danger" role="alert">
+                        Failed to load position history.
+                    </div>
+                `);
+            }
+        }
+
+        function renderDashboardPositionGraph(data) {
+            const $body = $('#divDashboardGraphPosition .widget-body');
+            const $message = $body.find('.dashboard-position-message');
+            const $chartContainer = $body.find('.dashboard-chart-container');
+
+            // Clear any previous message
+            $message.empty();
+
+            console.log(data);
+
+            // No position history
+            if (!data || !data.History || data.History.length === 0) {
+
+                // Destroy old chart if one exists
+                if (dashboardPositionChart) {
+                    dashboardPositionChart.destroy();
+                    dashboardPositionChart = null;
+                }
+
+                // Hide chart and show message
+                $chartContainer.hide();
+
+                $message.html(`
+                    <div class="alert alert-info" role="alert">
+                        No position history available for this group yet.
+                    </div>
+                `);
+
+                return;
+            }
+
+            // We have data, so show chart
+            $chartContainer.show();
+            $message.empty();
+
+            const ctx = document
+                .getElementById('chartDashboardPosition')
+                .getContext('2d');
+
+            const positionData = data.History.map(item => ({
+                week: item.Week,
+                position: item.Position
+            }));
+
+            // Destroy previous chart before creating another
+            if (dashboardPositionChart) {
+                dashboardPositionChart.destroy();
+            }
+
+            dashboardPositionChart = new Chart(ctx, {
+                type: 'line',
+
+                data: {
+                    labels: positionData.map(item => item.week),
+
+                    datasets: [{
+                        label: 'Position',
+                        data: positionData.map(item => item.position),
+                        tension: 0.3
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Week'
+                            },
+
+                            ticks: {
+                                precision: 0
+                            }
+                        },
+
+                        y: {
+                            reverse: true,
+                            min: 1,
+                            max: data.MemberCount,
+
+                            title: {
+                                display: true,
+                                text: 'Position'
+                            },
+
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>

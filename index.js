@@ -1978,6 +1978,467 @@ app.get('/weeklySpreads', async (req, res, next) => {
 });
 
 /*
+    Endpoints for dashboard data
+*/
+
+// Get this weeks standings for a specific group (Includes positional changes from last week)
+/*
+    Returned Object Example:
+    {
+        GroupID: "group-id",
+        GroupName: "group-name",
+        Week: current-week-number,
+        PreviousWeek: previous-week-number,
+        MemberCount: number-of-members-in-group,
+        HasStandings: true/false,
+        Standings: [
+            {
+                UserID: "user-id",
+                Username: "user-name",
+                Position: current-position,
+                PreviousPosition: previous-position,
+                PositionChange: position-change,
+                PicksLeft: picks-left,
+                LastLostWeek: last-week-user-lost-a-pick,
+            }
+        ]
+    }
+*/
+app.get('/dashboard/currentStandingsByGroup', async (req, res, next) => {
+    try {
+        const { groupID } = req.query;
+
+        if (!groupID) {
+            return res.status(400).json({
+                error: 'groupID is required'
+            });
+        }
+
+        /*
+            1. Get group information + member count
+        */
+        const groupInfo = await dbGet(`
+            SELECT
+                g.GroupID,
+                g.GroupName,
+                COUNT(gm.UserID) AS MemberCount
+            FROM tblGroups g
+            LEFT JOIN tblGroupMembers gm
+                ON gm.GroupID = g.GroupID
+            WHERE g.GroupID = @param1
+            GROUP BY
+                g.GroupID,
+                g.GroupName
+        `, [groupID]);
+
+        if (!groupInfo) {
+            return res.status(404).json({
+                error: 'Group not found'
+            });
+        }
+
+
+        /*
+            2. Get the two most recent finalized
+               standings weeks for this group
+        */
+        const weeks = await dbGetAll(`
+            SELECT DISTINCT TOP 2
+                Week
+            FROM tblStandingsHistory
+            WHERE GroupID = @param1
+            ORDER BY Week DESC
+        `, [groupID]);
+
+        const currentWeek =
+            weeks[0]?.Week ?? null;
+
+        const previousWeek =
+            weeks[1]?.Week ?? null;
+
+
+        /*
+            No standings have been generated yet.
+        */
+        if (currentWeek === null) {
+            return res.json({
+                GroupID: groupInfo.GroupID,
+                GroupName: groupInfo.GroupName,
+
+                Week: null,
+                PreviousWeek: null,
+
+                MemberCount: groupInfo.MemberCount,
+
+                HasStandings: false,
+
+                Standings: []
+            });
+        }
+
+
+        /*
+            3. Retrieve current standings plus the
+               previous position for each user.
+
+            The LEFT JOIN means Week 2 will still
+            work even though there is no previous
+            standings snapshot.
+        */
+        const rows = await dbGetAll(`
+            SELECT
+                currentStanding.UserID,
+                gm.Username,
+
+                currentStanding.Position,
+                previousStanding.Position
+                    AS PreviousPosition,
+
+                currentStanding.PicksLeft,
+                currentStanding.LastPickLostWeek
+
+            FROM tblStandingsHistory currentStanding
+
+            INNER JOIN tblGroupMembers gm
+                ON gm.UserID = currentStanding.UserID
+                AND gm.GroupID = currentStanding.GroupID
+
+            LEFT JOIN tblStandingsHistory previousStanding
+                ON previousStanding.UserID =
+                    currentStanding.UserID
+                AND previousStanding.GroupID =
+                    currentStanding.GroupID
+                AND previousStanding.Week =
+                    @param3
+
+            WHERE currentStanding.GroupID =
+                @param1
+
+              AND currentStanding.Week =
+                @param2
+
+            ORDER BY
+                currentStanding.Position,
+                gm.Username
+        `, [
+            groupID,
+            currentWeek,
+            previousWeek
+        ]);
+
+
+        /*
+            4. Add PositionChange
+        */
+        const standings = rows.map(row => {
+            const previousPosition =
+                row.PreviousPosition ?? null;
+
+            const positionChange =
+                previousPosition === null
+                    ? null
+                    : previousPosition -
+                      row.Position;
+
+            return {
+                UserID: row.UserID,
+                Username: row.Username,
+
+                Position: row.Position,
+                PreviousPosition:
+                    previousPosition,
+                PositionChange:
+                    positionChange,
+
+                PicksLeft: row.PicksLeft,
+                LastPickLostWeek:
+                    row.LastPickLostWeek
+            };
+        });
+
+
+        /*
+            5. Final response
+        */
+        return res.json({
+            GroupID: groupInfo.GroupID,
+            GroupName: groupInfo.GroupName,
+
+            Week: currentWeek,
+            PreviousWeek: previousWeek,
+
+            MemberCount: groupInfo.MemberCount,
+
+            HasStandings: true,
+
+            Standings: standings
+        });
+
+    } catch (error) {
+        console.error(
+            'Error getting dashboard standings:',
+            error
+        );
+
+        return res.status(500).json({
+            error: 'Failed to get standings'
+        });
+    }
+})
+
+// Get all standings for an user for a specific group
+/*
+    Returned Object Example:
+    {
+        UserID: "user-id",
+        GroupID: "group-id",
+        MemberCount: number-of-members-in-group,
+        History: [
+            {
+                Week: week-number,
+                Position: position,
+                PicksLeft: picks-left
+            }
+        ]    
+    }
+*/
+app.get('/dashboard/allStandingsByUser', async (req, res, next) => {
+    let strGroupID = req.query.groupID;
+    let strUserID = req.query.userID;
+
+    if (!strGroupID || !strUserID) {
+        return res.status(400).json({ error: "GroupID and UserID are required" });
+    }
+
+    // First get all standings for the user in the group
+    try {
+        // Verify the user belongs to the group
+        const member = await dbGet(`
+            SELECT UserID
+            FROM tblGroupMembers
+            WHERE GroupID = @param1
+              AND UserID = @param2
+        `, [
+            strGroupID,
+            strUserID
+        ]);
+
+        if (!member) {
+            return res.status(404).json({
+                error: "User is not a member of this group"
+            });
+        }
+
+        const groupInfo = await dbGet(`
+            SELECT COUNT(*) AS MemberCount
+            FROM tblGroupMembers
+            WHERE GroupID = @param1
+        `, [strGroupID]);
+
+        const standings = await dbGetAll(`
+            SELECT Week, Position, PicksLeft
+            FROM tblStandingsHistory
+            WHERE GroupID = @param1 AND UserID = @param2
+            ORDER BY Week ASC
+        `, [strGroupID, strUserID]);
+
+        // Prepend week 1 to the data with Position 1 and PicksLeft 7
+        const history = [
+            { Week: 1, Position: 1, PicksLeft: 7 },
+            ...standings
+        ]
+
+        return res.status(200).json({
+            UserID: strUserID,
+            GroupID: strGroupID,
+            MemberCount: groupInfo.MemberCount,
+            History: history
+        })
+
+    } catch (error) {
+        return res.status(500).json({ error: 'Failed to fetch standings' });
+    }
+});
+
+/*
+    Get a summary of losses for all users in a group
+
+    Returned Object Example:
+    {
+        GroupID: "group-id",
+        Week: current-week-number,
+        HasLosses: true/false,
+        UsersWithLosses: (int) number of users with losses,
+        TotalLostPicks: (int) total number of lost picks in the group,
+        Losses: [
+            {
+                PickedTeam: "team-name",
+                PickCount: (int) number of users that lost this pick
+            },
+            ...
+        ]
+    }
+*/
+app.get('/dashboard/groupLossesSummary', async (req, res) => {
+    const strGroupID = req.query.groupID;
+
+    if (!strGroupID) {
+        return res.status(400).json({
+            error: 'GroupID is required'
+        });
+    }
+
+    try {
+        // ------------------------------------------------
+        // 1. Verify the group exists
+        // ------------------------------------------------
+        const group = await dbGet(`
+            SELECT GroupID
+            FROM tblGroups
+            WHERE GroupID = @param1
+        `, [strGroupID]);
+
+        if (!group) {
+            return res.status(404).json({
+                error: 'Group not found'
+            });
+        }
+
+
+        // ------------------------------------------------
+        // 2. Find the latest finalized standings week
+        // ------------------------------------------------
+        const latestStandings = await dbGet(`
+            SELECT MAX(Week) AS Week
+            FROM tblStandingsHistory
+            WHERE GroupID = @param1
+        `, [strGroupID]);
+
+
+        // ------------------------------------------------
+        // 3. No finalized standings yet
+        //    Means Week 1 has not been processed
+        // ------------------------------------------------
+        if (
+            !latestStandings ||
+            latestStandings.Week === null
+        ) {
+            return res.status(200).json({
+                GroupID: strGroupID,
+                Week: null,
+
+                HasLosses: false,
+
+                UsersWithLosses: 0,
+                TotalLostPicks: 0,
+
+                Losses: []
+            });
+        }
+
+
+        // ------------------------------------------------
+        // 4. Determine the most recently processed week
+        // ------------------------------------------------
+
+        // Example:
+        // Standings Week 2 were created after Week 1 was processed
+        // Standings Week 6 were created after Week 5 was processed
+        const lastWeek =
+            latestStandings.Week - 1;
+
+
+        // ------------------------------------------------
+        // 5. Get loss summary
+        // ------------------------------------------------
+        const lossesSummary = await dbGet(`
+            SELECT
+                COUNT(DISTINCT UserID)
+                    AS UsersWithLosses,
+
+                COALESCE(
+                    SUM(PicksLost),
+                    0
+                ) AS TotalLostPicks
+
+            FROM tblPicksLost
+
+            WHERE GroupID = @param1
+              AND Week = @param2
+              AND selection_correct = 0
+        `, [
+            strGroupID,
+            lastWeek
+        ]);
+
+
+        // ------------------------------------------------
+        // 6. Get losing teams
+        // ------------------------------------------------
+        const lossesBreakdown = await dbGetAll(`
+            SELECT
+                PickedTeam,
+                COUNT(*) AS PickCount
+
+            FROM tblPicksLost
+
+            WHERE GroupID = @param1
+              AND Week = @param2
+              AND selection_correct = 0
+
+            GROUP BY PickedTeam
+
+            ORDER BY
+                PickCount DESC,
+                PickedTeam ASC
+        `, [
+            strGroupID,
+            lastWeek
+        ]);
+
+
+        // ------------------------------------------------
+        // 7. Build final response
+        // ------------------------------------------------
+        const usersWithLosses =
+            lossesSummary?.UsersWithLosses ?? 0;
+
+        const totalLostPicks =
+            lossesSummary?.TotalLostPicks ?? 0;
+
+
+        return res.status(200).json({
+            GroupID: strGroupID,
+            Week: lastWeek,
+
+            HasLosses:
+                usersWithLosses > 0,
+
+            UsersWithLosses:
+                usersWithLosses,
+
+            TotalLostPicks:
+                totalLostPicks,
+
+            Losses:
+                lossesBreakdown ?? []
+        });
+
+    } catch (error) {
+        console.error(
+            'Error fetching group losses summary:',
+            error
+        );
+
+        return res.status(500).json({
+            error: 'Failed to fetch losses summary'
+        });
+    }
+});
+
+
+
+/*
     Updating Week Number Automatically Each Monday
 */
 

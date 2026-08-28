@@ -920,63 +920,91 @@
         }
 
         // Add new row to groups datatable
-        function addGroupRow(groupName, ownerName, numMembers) {
+        function addGroupRow(groupID, groupName, ownerName, numMembers) {
             let table = $('#tblGroups').DataTable();
+
             let newRow = [
                 groupName,
                 ownerName,
                 numMembers
             ];
-            table.row.add(newRow).draw();
+
+            const rowNode = table.row.add(newRow).draw(false).node();
+
+            $(rowNode).attr('data-value', groupID);
         }
 
-        function addYourGroupRow(groupName, ownerName, numMembers) {
+        function addYourGroupRow(groupID, groupName, ownerName, numMembers) {
             let table = $('#tblYourGroups').DataTable();
+
             let newRow = [
                 groupName,
                 ownerName,
                 numMembers
             ];
-            table.row.add(newRow).draw();
+
+            const rowNode = table.row.add(newRow).draw(false).node();
+
+            $(rowNode).attr('data-value', groupID);
         }
 
 
-        function addToPicksGroups(groupName, ownerName) {
-            let table = $('#tblPicksGroups').DataTable();
-            let newRow = [
+        function addToPicksGroups(groupID, groupName, ownerName) {
+            console.log('here');
+            const table = $('#tblPicksGroups').DataTable();
+
+            const newRow = table.row.add([
                 groupName,
                 ownerName
-            ];
-            table.row.add(newRow).draw();
+            ]);
+
+            const rowNode = newRow.node();
+
+            $(rowNode).attr('data-value', groupID);
+            console.log($(rowNode).attr('data-value'));
+
+            table.draw(false);
         }
 
         async function displayPicksGroups() {
             try {
+                const $table = $('#tblPicksGroups');
+
+                if ($.fn.DataTable.isDataTable('#tblPicksGroups')) {
+                    $table.DataTable().destroy();
+                }
+
+                $table.find('tbody').empty();
+
                 const groupsResponse = await getYourGroups();
                 const groups = groupsResponse.groups;
 
                 for (const group of groups) {
-                    const groupInfo = await $.get(`https://collegefootballbattleship-bae9a8eebbcaacff.eastus-01.azurewebsites.net/groupByID?groupID=${group.GroupID}`);
+                    const groupInfo = await $.get(
+                        apiURL + '/groupByID?groupID=' + group.GroupID
+                    );
+
                     const strRow = `
                         <tr data-value="${group.GroupID}">
                             <td>${group.GroupName}</td>
                             <td>${groupInfo.OwnerName}</td>
-                        </tr>`;
-                    $('#tblPicksGroups tbody').append(strRow);
+                        </tr>
+                    `;
+
+                    $table.find('tbody').append(strRow);
                 }
 
-                // Initialize DataTable after all rows are added
-                $('#tblPicksGroups').DataTable({
+                $table.DataTable({
                     fixedHeader: true,
                     responsive: true,
                     columnDefs: [
                         {
                             targets: '_all',
-                            className: 'dt-head-center',
+                            className: 'dt-head-center'
                         },
                         {
                             targets: '_all',
-                            className: 'dt-body-center',
+                            className: 'dt-body-center'
                         }
                     ]
                 });
@@ -1540,7 +1568,8 @@
                                                 displayYourGroups();
                                                 //addGroupRow(result.groupName, owner.owner, numMembers);
                                                 //addYourGroupRow(result.groupName, owner.owner, numMembers);
-                                                addToPicksGroups(result.groupName, owner.owner);
+                                                displayPicksGroups();
+                                                //addToPicksGroups(result.groupID, result.groupName, owner.owner);
                                                 loadDashboard();
                                             })
                                         })
@@ -1565,7 +1594,8 @@
                                             displayYourGroups();
                                             //addGroupRow(result.groupName, owner.owner, numMembers);
                                             //addYourGroupRow(result.groupName, owner.owner, numMembers);
-                                            addToPicksGroups(result.groupName, owner.owner);
+                                            displayPicksGroups();
+                                            //addToPicksGroups(result.groupID, result.groupName, owner.owner);
                                             loadDashboard();
                                         })
                                     })
@@ -1663,7 +1693,9 @@
                                                             displayGroupsTable();
                                                             displayYourGroups();
                                                             //addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
-                                                            addToPicksGroups(strGroupName, strOwnerName);
+                                                            console.log('here')
+                                                            displayPicksGroups();
+                                                            //addToPicksGroups(strGroupID, strGroupName, strOwnerName);
                                                             loadDashboard();
                                                             let postData = {
                                                                 groupID: strGroupID,
@@ -1692,7 +1724,9 @@
                                                     displayGroupsTable();
                                                     displayYourGroups();
                                                     //addYourGroupRow(strGroupName, strOwnerName, strNumMembers);
-                                                    addToPicksGroups(strGroupName, strOwnerName)
+                                                    console.log('here');
+                                                    displayPicksGroups();
+                                                    //addToPicksGroups(strGroupID, strGroupName, strOwnerName)
                                                     loadDashboard();
                                                     let postData = {
                                                         groupID: strGroupID,

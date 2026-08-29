@@ -730,6 +730,27 @@ app.get('/groupByID', async (req, res, next) => {
     }
 });
 
+getFirstGame = async () => {
+    try {
+        const gamesData = await getAllGames();
+        return gamesData[0];
+    } catch (error) {
+        console.error('Error fetching first game:', error);
+        throw new Error('Failed to fetch the first game');
+    }
+};
+
+const hasJoinDeadlinePassed = async () => {
+    const firstGame = await getFirstGame();
+
+    const joinCutoff = new Date(firstGame.startDate);
+
+    // Allow joining for 7 days after first game starts
+    joinCutoff.setDate(joinCutoff.getDate() + 7);
+
+    return new Date() >= joinCutoff;
+};
+
 // Add a user to a group
 app.post('/groupmembers', async (req, res, next) => {
     let strGroupID = req.body.groupID;
@@ -744,6 +765,50 @@ app.post('/groupmembers', async (req, res, next) => {
 
     try {
         const pool = await poolPromise;
+
+        // ---------------------------------------
+        // CHECK IF GROUP JOIN DEADLINE HAS PASSED
+        // ---------------------------------------
+        // Prevent initialization after join deadline
+        if (await hasJoinDeadlinePassed()) {
+            return res.status(403).json({
+                error: "The deadline to join a group has passed"
+            });
+        }
+
+        const memberResult = await pool.request()
+            .input('UserID', sql.UniqueIdentifier, strUserID)
+            .input('GroupID', sql.UniqueIdentifier, strGroupID)
+            .query(`
+                SELECT 1
+                FROM tblGroupMembers
+                WHERE UserID = @UserID
+                AND GroupID = @GroupID
+            `);
+
+        if (memberResult.recordset.length === 0) {
+            return res.status(403).json({
+                error: "User is not a member of this group"
+            });
+        }
+
+        const existingResult = await pool.request()
+            .input('UserID', sql.UniqueIdentifier, strUserID)
+            .input('GroupID', sql.UniqueIdentifier, strGroupID)
+            .input('Week', sql.Int, intWeek)
+            .query(`
+                SELECT 1
+                FROM tblPicksLeft
+                WHERE UserID = @UserID
+                AND GroupID = @GroupID
+                AND Week = @Week
+            `);
+
+        if (existingResult.recordset.length > 0) {
+            return res.status(409).json({
+                error: "PicksLeft has already been initialized for this user"
+            });
+        }
 
         // Get hashed group password from the database
         const groupResult = await pool.request()
@@ -1708,6 +1773,13 @@ app.post('/picksLeft', async (req, res, next) => {
     if (strGroupID && strUserID) {
         try {
             const pool = await poolPromise;
+
+            // Prevent initialization after join deadline
+            if (await hasJoinDeadlinePassed()) {
+                return res.status(403).json({
+                    error: "The deadline to join a group has passed"
+                });
+            }
 
             // Execute the insert command
             await pool.request()

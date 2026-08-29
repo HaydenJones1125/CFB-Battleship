@@ -776,40 +776,6 @@ app.post('/groupmembers', async (req, res, next) => {
             });
         }
 
-        const memberResult = await pool.request()
-            .input('UserID', sql.UniqueIdentifier, strUserID)
-            .input('GroupID', sql.UniqueIdentifier, strGroupID)
-            .query(`
-                SELECT 1
-                FROM tblGroupMembers
-                WHERE UserID = @UserID
-                AND GroupID = @GroupID
-            `);
-
-        if (memberResult.recordset.length === 0) {
-            return res.status(403).json({
-                error: "User is not a member of this group"
-            });
-        }
-
-        const existingResult = await pool.request()
-            .input('UserID', sql.UniqueIdentifier, strUserID)
-            .input('GroupID', sql.UniqueIdentifier, strGroupID)
-            .input('Week', sql.Int, intWeek)
-            .query(`
-                SELECT 1
-                FROM tblPicksLeft
-                WHERE UserID = @UserID
-                AND GroupID = @GroupID
-                AND Week = @Week
-            `);
-
-        if (existingResult.recordset.length > 0) {
-            return res.status(409).json({
-                error: "PicksLeft has already been initialized for this user"
-            });
-        }
-
         // Get hashed group password from the database
         const groupResult = await pool.request()
             .input('GroupID', sql.UniqueIdentifier, strGroupID)

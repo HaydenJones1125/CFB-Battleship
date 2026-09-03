@@ -2501,10 +2501,22 @@
 
             matchupContainer.empty();
 
-            console.log(preparedGameData);
-
             preparedGameData.forEach((game) => {
-                const formattedDateTime = formatGameDateTime(game.startDate);
+                const gameStarted =
+                    Date.now() >= new Date(game.startDate).getTime();
+
+                const gameHasSelection =
+                    game.awayTeam.selected ||
+                    game.homeTeam.selected;
+
+                // Hide games that have already started
+                // unless the user selected one of the teams
+                if (gameStarted && !gameHasSelection) {
+                    return;
+                }
+
+                const formattedDateTime =
+                    formatGameDateTime(game.startDate);
 
                 const spreadText =
                     game.spread?.favorite == null ||
@@ -2529,11 +2541,9 @@
                             ? ''
                             : 'team-unavailable';
 
-                const gameStarted =
-                    Date.now() >=
-                    new Date(game.startDate).getTime();
-
-                // Selected teams must remain clickable so they can be removed
+                // If game has started, both teams are disabled.
+                // Otherwise unavailable/non-FBS teams are disabled
+                // unless they are currently selected.
                 const awayTeamDisabled =
                     gameStarted ||
                     (
@@ -2555,7 +2565,7 @@
                     );
 
                 matchupContainer.append(`
-                    <div 
+                    <div
                         class="card matchup-card mb-3"
                         id="game-${game.gameID}"
                         data-game-id="${game.gameID}"
@@ -2576,14 +2586,14 @@
                                 <!-- Away Team -->
                                 <div class="col-6 p-0 d-flex border-end matchup-team-column">
 
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         class="
-                                            matchup-team 
-                                            btn 
+                                            matchup-team
+                                            btn
                                             flex-fill
-                                            rounded-0 
-                                            p-3 
+                                            rounded-0
+                                            p-3
                                             ${awayTeamClass}
                                         "
                                         data-team="${game.awayTeam.name}"
@@ -2641,14 +2651,14 @@
                                 <!-- Home Team -->
                                 <div class="col-6 p-0 d-flex matchup-team-column">
 
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         class="
-                                            matchup-team 
-                                            btn 
+                                            matchup-team
+                                            btn
                                             flex-fill
-                                            rounded-0 
-                                            p-3 
+                                            rounded-0
+                                            p-3
                                             ${homeTeamClass}
                                         "
                                         data-team="${game.homeTeam.name}"

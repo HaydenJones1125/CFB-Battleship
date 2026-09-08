@@ -2094,6 +2094,11 @@ app.get('/dashboard/currentStandingsByGroup', async (req, res, next) => {
         const previousWeek =
             weeks[1]?.Week ?? null;
 
+        const displayPreviousWeek =
+            currentWeek === 2 && previousWeek === null
+                ? 1
+                : previousWeek;
+
 
         /*
             No standings have been generated yet.
@@ -2167,16 +2172,27 @@ app.get('/dashboard/currentStandingsByGroup', async (req, res, next) => {
 
         /*
             4. Add PositionChange
+
+            Week 2 is the first saved standings snapshot.
+            Everyone effectively started Week 1 tied
+            at position 1.
         */
         const standings = rows.map(row => {
-            const previousPosition =
+            let previousPosition =
                 row.PreviousPosition ?? null;
+
+            if (
+                currentWeek === 2 &&
+                previousWeek === null
+            ) {
+                previousPosition = 1;
+            }
 
             const positionChange =
                 previousPosition === null
                     ? null
                     : previousPosition -
-                      row.Position;
+                    row.Position;
 
             return {
                 UserID: row.UserID,
@@ -2203,7 +2219,7 @@ app.get('/dashboard/currentStandingsByGroup', async (req, res, next) => {
             GroupName: groupInfo.GroupName,
 
             Week: currentWeek,
-            PreviousWeek: previousWeek,
+            PreviousWeek: displayPreviousWeek,
 
             MemberCount: groupInfo.MemberCount,
 

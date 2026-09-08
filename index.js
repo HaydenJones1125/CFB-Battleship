@@ -2328,7 +2328,7 @@ app.get('/dashboard/groupLossesSummary', async (req, res) => {
 
     try {
         // ------------------------------------------------
-        // 1. Verify the group exists
+        // 1. Verify group exists
         // ------------------------------------------------
         const group = await dbGet(`
             SELECT GroupID
@@ -2344,7 +2344,7 @@ app.get('/dashboard/groupLossesSummary', async (req, res) => {
 
 
         // ------------------------------------------------
-        // 2. Find the latest finalized standings week
+        // 2. Find latest finalized standings week
         // ------------------------------------------------
         const latestStandings = await dbGet(`
             SELECT MAX(Week) AS Week
@@ -2353,10 +2353,7 @@ app.get('/dashboard/groupLossesSummary', async (req, res) => {
         `, [strGroupID]);
 
 
-        // ------------------------------------------------
-        // 3. No finalized standings yet
-        //    Means Week 1 has not been processed
-        // ------------------------------------------------
+        // No week has been processed yet
         if (
             !latestStandings ||
             latestStandings.Week === null
@@ -2364,61 +2361,78 @@ app.get('/dashboard/groupLossesSummary', async (req, res) => {
             return res.status(200).json({
                 GroupID: strGroupID,
                 Week: null,
-
                 HasLosses: false,
-
                 UsersWithLosses: 0,
                 TotalLostPicks: 0,
-
                 Losses: []
             });
         }
 
 
-        // ------------------------------------------------
-        // 4. Determine the most recently processed week
-        // ------------------------------------------------
+        /*
+            Example:
 
-        // Example:
-        // Standings Week 2 were created after Week 1 was processed
-        // Standings Week 6 were created after Week 5 was processed
-        const lastWeek =
-            latestStandings.Week - 1;
+            Week 1 PicksLeft = starting Week 1 picks
+            Week 2 PicksLeft = picks remaining after Week 1
+
+            Therefore, if latest standings are Week 2,
+            the processed week was Week 1.
+        */
+        const afterWeek =
+            Number(latestStandings.Week);
+
+        const processedWeek =
+            afterWeek - 1;
 
 
         // ------------------------------------------------
-        // 5. Get loss summary
+        // 3. Calculate picks lost using PicksLeft snapshots
         // ------------------------------------------------
         const lossesSummary = await dbGet(`
             SELECT
-                COUNT(DISTINCT UserID)
-                    AS UsersWithLosses,
+                COUNT(
+                    CASE
+                        WHEN Previous.PicksLeft > CurrentWeek.PicksLeft
+                        THEN 1
+                    END
+                ) AS UsersWithLosses,
 
                 COALESCE(
-                    SUM(PicksLost),
+                    SUM(
+                        CASE
+                            WHEN Previous.PicksLeft > CurrentWeek.PicksLeft
+                            THEN Previous.PicksLeft - CurrentWeek.PicksLeft
+                            ELSE 0
+                        END
+                    ),
                     0
                 ) AS TotalLostPicks
 
-            FROM tblPicksLost
+            FROM tblPicksLeft AS Previous
 
-            WHERE GroupID = @param1
-              AND Week = @param2
-              AND selection_correct = 0
+            INNER JOIN tblPicksLeft AS CurrentWeek
+                ON Previous.UserID = CurrentWeek.UserID
+               AND Previous.GroupID = CurrentWeek.GroupID
+
+            WHERE Previous.GroupID = @param1
+              AND Previous.Week = @param2
+              AND CurrentWeek.Week = @param3
         `, [
             strGroupID,
-            lastWeek
+            processedWeek,
+            afterWeek
         ]);
 
 
         // ------------------------------------------------
-        // 6. Get losing teams
+        // 4. Determine which teams caused losses
         // ------------------------------------------------
         const lossesBreakdown = await dbGetAll(`
             SELECT
                 PickedTeam,
                 COUNT(*) AS PickCount
 
-            FROM tblPicksLost
+            FROM tblSelections
 
             WHERE GroupID = @param1
               AND Week = @param2
@@ -2431,26 +2445,30 @@ app.get('/dashboard/groupLossesSummary', async (req, res) => {
                 PickedTeam ASC
         `, [
             strGroupID,
-            lastWeek
+            processedWeek
         ]);
 
 
         // ------------------------------------------------
-        // 7. Build final response
+        // 5. Build response
         // ------------------------------------------------
         const usersWithLosses =
-            lossesSummary?.UsersWithLosses ?? 0;
+            Number(
+                lossesSummary?.UsersWithLosses ?? 0
+            );
 
         const totalLostPicks =
-            lossesSummary?.TotalLostPicks ?? 0;
-
+            Number(
+                lossesSummary?.TotalLostPicks ?? 0
+            );
 
         return res.status(200).json({
             GroupID: strGroupID,
-            Week: lastWeek,
+
+            Week: processedWeek,
 
             HasLosses:
-                usersWithLosses > 0,
+                totalLostPicks > 0,
 
             UsersWithLosses:
                 usersWithLosses,

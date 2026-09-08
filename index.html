@@ -3410,7 +3410,7 @@
 
                     $.get(
                         apiURL +
-                        '/selection?userID=' +
+                        '/selectionsByCurrentWeek?userID=' +
                         userID +
                         '&groupID=' +
                         groupID
@@ -3472,7 +3472,7 @@
             try {
                 const selectionsData = await $.get(
                     apiURL +
-                    '/selection?userID=' +
+                    '/selectionsByCurrentWeek?userID=' +
                     userID +
                     '&groupID=' +
                     groupID
@@ -3748,6 +3748,7 @@
             // First getdata for last week, then render it in the dashboard last week widget
             try {
                 const lastWeekData = await $.get(apiURL + '/dashboard/groupLossesSummary?groupID=' + groupID);
+                console.log(lastWeekData);
                 // Render the last week data in the dashboard widget
                 renderDashboardLastWeek(lastWeekData);
             } catch (error) {
@@ -3761,10 +3762,20 @@
         }
 
         function renderDashboardLastWeek(data) {
-            $body = $('#divDashboardGroupLosses .widget-body');
+            const $widget = $('#divDashboardGroupLosses');
+            const $body = $widget.find('.widget-body');
+            const $title = $widget.find('.widget-title');
+
             $body.empty();
 
-            // If there is no data for last week, show a message (Mainly for Week 1, since there are no losses yet)
+            // Update widget title
+            if (data.Week !== null) {
+                $title.text(`Group Losses — Week ${data.Week}`);
+            } else {
+                $title.text('Group Losses');
+            }
+
+            // If there is no data for last week, show a message
             if (data.Week === null) {
                 $body.append(`
                     <div class="alert alert-info" role="alert">
@@ -3948,6 +3959,30 @@
 
             const ctx = canvas.getContext('2d');
 
+
+            // ==========================================
+            // ALWAYS DISPLAY WEEKS 1-16
+            // ==========================================
+
+            const weekLabels = Array.from(
+                { length: 16 },
+                (_, i) => i + 1
+            );
+
+            const picksByWeek = new Map(
+                data.map(item => [
+                    Number(item.Week),
+                    Number(item.PicksLeft)
+                ])
+            );
+
+            const picksData = weekLabels.map(week =>
+                picksByWeek.has(week)
+                    ? picksByWeek.get(week)
+                    : null
+            );
+
+
             if (dashboardPicksChart) {
                 dashboardPicksChart.destroy();
             }
@@ -3956,12 +3991,13 @@
                 type: 'line',
 
                 data: {
-                    labels: data.map(item => item.Week),
+                    labels: weekLabels,
 
                     datasets: [{
                         label: 'Picks Remaining',
-                        data: data.map(item => item.PicksLeft),
-                        tension: 0.3
+                        data: picksData,
+                        tension: 0.3,
+                        spanGaps: false
                     }]
                 },
 
@@ -3983,14 +4019,15 @@
                             },
 
                             ticks: {
-                                precision: 0
+                                precision: 0,
+                                autoSkip: false
                             }
                         },
 
                         y: {
                             beginAtZero: true,
                             min: 0,
-                            max: 7,
+                            max: 7.75,
 
                             title: {
                                 display: true,
@@ -3998,7 +4035,11 @@
                             },
 
                             ticks: {
-                                precision: 0
+                                precision: 0,
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value : '';
+                                }
                             }
                         }
                     }
@@ -4078,10 +4119,26 @@
                 .getElementById('chartDashboardPosition')
                 .getContext('2d');
 
-            const positionData = data.History.map(item => ({
-                week: item.Week,
-                position: item.Position
-            }));
+            // Always display Weeks 1-16 on the X axis
+            const weekLabels = Array.from(
+                { length: 16 },
+                (_, i) => i + 1
+            );
+
+            // Create a quick lookup of processed weeks
+            const positionByWeek = new Map(
+                data.History.map(item => [
+                    Number(item.Week),
+                    Number(item.Position)
+                ])
+            );
+
+            // Put null anywhere that week has not been processed yet
+            const positionData = weekLabels.map(week =>
+                positionByWeek.has(week)
+                    ? positionByWeek.get(week)
+                    : null
+            );
 
             // Destroy previous chart before creating another
             if (dashboardPositionChart) {
@@ -4092,12 +4149,13 @@
                 type: 'line',
 
                 data: {
-                    labels: positionData.map(item => item.week),
+                    labels: weekLabels,
 
                     datasets: [{
                         label: 'Position',
-                        data: positionData.map(item => item.position),
-                        tension: 0.3
+                        data: positionData,
+                        tension: 0.3,
+                        spanGaps: false
                     }]
                 },
 
@@ -4119,13 +4177,14 @@
                             },
 
                             ticks: {
-                                precision: 0
+                                precision: 0,
+                                autoSkip: false
                             }
                         },
 
                         y: {
                             reverse: true,
-                            min: 1,
+                            min: 0.25,
                             max: data.MemberCount,
 
                             title: {
@@ -4134,7 +4193,11 @@
                             },
 
                             ticks: {
-                                precision: 0
+                                precision: 0,
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value : '';
+                                }
                             }
                         }
                     }

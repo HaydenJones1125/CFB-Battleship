@@ -2484,7 +2484,7 @@ const cron = require('node-cron');
 const fetch = require('node-fetch');
 
 let year = new Date().getFullYear();
-let currentFootballWeekNumber = 1;
+let currentFootballWeekNumber = 2;
 
 /*
     Functionality to change the year on July 1st and delete database entries for tblPicksLeft, tblSelections, tblGroupMembers, and then tblGroups
@@ -3472,9 +3472,13 @@ async function commitAllUsersChecks(planBundle) {
     const pool = await poolPromise;
     const tx = new sql.Transaction(pool);
 
+    let currentStep = 'starting transaction';
+
     await tx.begin();
 
     try {
+        currentStep = 'enabling XACT_ABORT';
+
         await new sql.Request(tx)
             .batch('SET XACT_ABORT ON;');
 
@@ -3482,6 +3486,8 @@ async function commitAllUsersChecks(planBundle) {
         // ======================================
         // 1. UPDATE SELECTION RESULTS
         // ======================================
+
+        currentStep = 'updating selection results';
 
         for (const p of plans) {
             for (const u of p.updates) {
@@ -3530,6 +3536,8 @@ async function commitAllUsersChecks(planBundle) {
         // ======================================
         // 2. WRITE NEXT WEEK'S PICKS LEFT
         // ======================================
+
+        currentStep = 'writing next week picks left';
 
         for (const p of plans) {
             await new sql.Request(tx)
@@ -3593,13 +3601,21 @@ async function commitAllUsersChecks(planBundle) {
         // 3. SAVE NEXT WEEK'S STANDINGS
         // ======================================
 
+        currentStep = 'building group list';
+
         const groupIDs = [
             ...new Set(
                 plans.map(p => p.groupID)
             )
         ];
 
+        currentStep = 'saving next week standings';
+
         for (const groupID of groupIDs) {
+            console.log(
+                `Saving standings for group ${groupID}, week ${nextWeek}`
+            );
+
             await saveGroupStandings(
                 tx,
                 groupID,
@@ -3612,10 +3628,12 @@ async function commitAllUsersChecks(planBundle) {
         // 4. COMMIT EVERYTHING
         // ======================================
 
+        currentStep = 'committing transaction';
+
         await tx.commit();
 
         console.log(
-            `✅ Committed ${plans.length} users ` +
+            `✅ Committed ${plans.length} user/group records ` +
             `for week ${processedWeek}`
         );
 
@@ -3625,12 +3643,49 @@ async function commitAllUsersChecks(planBundle) {
         );
 
     } catch (e) {
-        await tx.rollback();
+        console.error('\n❌ BULK COMMIT FAILED');
+        console.error(`Step: ${currentStep}`);
+        console.error('Message:', e.message);
+        console.error('Code:', e.code);
 
-        console.error(
-            '❌ Rolled back bulk commit:',
-            e.message || e
-        );
+        if (e.number !== undefined) {
+            console.error('SQL Number:', e.number);
+        }
+
+        if (e.lineNumber !== undefined) {
+            console.error('SQL Line:', e.lineNumber);
+        }
+
+        if (e.originalError) {
+            console.error(
+                'Original Error:',
+                e.originalError
+            );
+        }
+
+        /*
+            XACT_ABORT may have already killed the
+            transaction. Do not allow rollback()
+            to hide the original SQL error.
+        */
+        try {
+            await tx.rollback();
+
+            console.error(
+                '↩️ Transaction rolled back.'
+            );
+        } catch (rollbackError) {
+            if (rollbackError.code === 'EABORT') {
+                console.error(
+                    '↩️ Transaction was already aborted by SQL Server.'
+                );
+            } else {
+                console.error(
+                    '❌ Rollback error:',
+                    rollbackError
+                );
+            }
+        }
 
         throw e;
     }
